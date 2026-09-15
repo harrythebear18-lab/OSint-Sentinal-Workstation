@@ -35,7 +35,7 @@ interface Strike {
 }
 
 class BlitzortungFeed {
-  private strikes: Strike[] = []
+  private strikes = new Map<string, Strike>()
   private ws: WebSocket | null = null
   private connected = false
   private reconnectTimer: NodeJS.Timeout | null = null
@@ -64,13 +64,21 @@ class BlitzortungFeed {
 
   getStrikes(): LiveFeature[] {
     const now = Date.now()
+    const cutoff = now - STRIKE_LIFETIME
     // Prune old strikes
-    this.strikes = this.strikes.filter((s) => s.timestamp >= now - STRIKE_LIFETIME)
-    if (this.strikes.length > MAX_STRIKES) {
-      this.strikes = this.strikes.slice(-MAX_STRIKES)
+    for (const [id, s] of this.strikes) {
+      if (s.timestamp < cutoff) this.strikes.delete(id)
+    }
+    // Keep only the newest MAX_STRIKES if we overflowed
+    if (this.strikes.size > MAX_STRIKES) {
+      const arr = Array.from(this.strikes.values()).sort((a, b) => a.timestamp - b.timestamp)
+      const toRemove = arr.length - MAX_STRIKES
+      for (let i = 0; i < toRemove; i++) {
+        this.strikes.delete(arr[i].id)
+      }
     }
 
-    return this.strikes.map((s) => ({
+    return Array.from(this.strikes.values()).map((s) => ({
       id: s.id,
       type: 'lightning' as const,
       position: { lon: s.lon, lat: s.lat, height: 0 },
@@ -115,7 +123,7 @@ class BlitzortungFeed {
           }
 
           // Debug: log first few messages to see actual field names
-          if (this.strikes.length < 3) {
+          if (this.strikes.size < 3) {
             console.log(`[live/lightning] strike fields:`, Object.keys(strike).join(','), '— sample:', jsonStr.slice(0, 120))
           }
 
@@ -124,15 +132,17 @@ class BlitzortungFeed {
           if (isNaN(lat) || isNaN(lon)) return
 
           const ts = typeof strike.time === 'number' ? Math.floor(strike.time / 1e6) : Date.now()
-          this.strikes.push({
-            id: `lightning:${ts}:${lat.toFixed(4)}:${lon.toFixed(4)}`,
+          const id = `lightning:${ts}:${lat.toFixed(4)}:${lon.toFixed(4)}`
+          // Deduplicate by id; if the same strike arrives again, keep the latest
+          this.strikes.set(id, {
+            id,
             lat, lon,
             timestamp: ts,
             polarity: strike.polType ?? strike.pol ?? 0,
             current: strike.current ?? strike.amp ?? 0,
           })
         } catch (e) {
-          if (this.strikes.length === 0) {
+          if (this.strikes.size === 0) {
             console.warn(`[live/lightning] parse error: ${(e as Error).message}`)
           }
         }

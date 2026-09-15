@@ -428,3 +428,155 @@ The docs are **partially stale**:
 
 The next highest-impact work is **wiring the WebGPU kernels to production** —
 they compile, they're correct, they just need to be called.
+
+---
+
+## 17. Live Session Audit — 2025-09-15
+
+Ran by Devin during active test pass. Method: `tsc --noEmit`, `npm audit`,
+`git diff`, targeted `grep`, runtime DevTools logs.
+
+### Tool Results
+
+| Check | Result |
+|---|---|
+| `npx tsc --noEmit` | **PASS** (exit 0) |
+| `npm audit --audit-level=moderate` | **5 vulnerabilities** (3 high, 2 moderate) |
+| Active dev build | Running on `http://localhost:5174` |
+| Full `npm run build` | **Not run** — would stop the dev server and overwrite `out/` |
+
+### Security
+
+- `src/main/index.ts:80` still sets `webSecurity: false`. This is a deliberate
+  dev-only CORS workaround for RainViewer/GIBS tiles and must **not** ship in
+  production.
+- `electron` 32.1.0 has multiple high-severity advisories. The `npm audit`
+  fix path would bump Electron to 44.4.0 and Vite to 8.3.0, which are
+  breaking changes and require a full regression pass.
+- `extract-zip` and `esbuild`/`vite` are also flagged.
+
+### Git State
+
+- 34 modified files, 3 untracked files.
+- `.commit-msg.txt` deleted.
+- `package-lock.json` shows a large ~1,600-line diff — needs review before
+  commit.
+- New untracked files:
+  - `src/main/services/prediction/wildfire-spread-predictor.ts`
+  - `src/renderer/globe/plugins/plugin-harness.ts`
+  - `scripts/obfuscate-build.mjs`
+
+### Front-end
+
+- `SatellitesOverlay.tsx` now uses the Cesium simulation clock with a 12×
+  multiplier, giving a realistic time-lapse (24 h day/night in ~2 h, ISS orbit
+  in ~7.5 m).
+- A `requestRender` timer at 10 fps keeps satellites moving while the globe
+  is in `requestRenderMode`.
+- `SatelliteOverlay.tsx` (singular) still exists but is **not** imported in
+  `App.tsx`; likely stale and should be removed.
+- `plugin-harness.ts` exists and is exposed via `window.runPluginTests`. The
+  latest run with a richer mock viewer passed **7/41** plugins and failed **34**.
+  The dominant failure is `viewer.dataSources` / `viewer.canvas` access in
+  `register()` — the mock `Cesium.Viewer` needs to be made more complete before
+  the harness is meaningful.
+- `detectionPlugin` is still registered twice in
+  `src/renderer/globe/plugins/index.ts` (lines 88 and 134).
+
+### HAL / Compute
+
+- WebGPU is now called in production:
+  - `gpuCompute.execute()` in `src/renderer/globe/hal/compute-dispatcher.ts:239`
+  - `webCodecs.decodeImageFromBytes()` in `src/renderer/globe/hal/index.ts:35`
+- Worker pool used in 8 places.
+
+### Back-end
+
+- `src/main/index.ts` contains a `RUN_HARNESS=1` gated auto-test. This was
+  added for the plugin harness and must be removed before any commit.
+- 80 IPC handlers remain in place.
+- All live feeds polling (aircraft rate-limited, NHC DNS failures are external).
+- Climate/prediction engine running: 7 models, ~574 predictions, 500 wildfire
+  spread forecasts.
+
+### Immediate Action Items
+
+1. Remove `RUN_HARNESS` block from `src/main/index.ts`.
+2. Remove or deprecate `SatelliteOverlay.tsx` if it is no longer used.
+3. Fix `detectionPlugin` duplicate registration.
+4. Review `package-lock.json` — revert if unintended.
+5. Patch `electron`/`vite`/`extract-zip` after a test pass.
+6. Complete the plugin-harness mock viewer so the harness passes more than 7/41
+   plugins, or commit it as a known-fail CI scaffold.
+
+### Outstanding
+
+- `electron-builder` packaging audit not run.
+
+### Build Result — 2025-09-15
+
+`npm run build` was run after stopping the dev server. Result:
+
+| Check | Result |
+|---|---|
+| `npm run compile:wasm` | ✅ `simd-kernels.wat` → `simd-kernels.wasm` (1505 bytes) |
+| `npm run copy:cesium` | ✅ Cesium assets copied to `public/cesium` |
+| Main bundle | ✅ `out/main/index.js` 328.48 kB |
+| Preload bundle | ✅ `out/preload/index.js` 5.99 kB |
+| Renderer bundle | ✅ `out/renderer/globe/index.html` + `globe-DWKB8G41.js` 5,107.99 kB |
+| `plugin-harness.ts` | ✅ Compiled and split into `assets/plugin-harness-rMyel9QS.js` |
+| Build exit code | **0** (success) |
+
+Build warnings:
+- Several dynamically imported modules are also statically imported (dem-tiles,
+  dem-service, dem-zoom, worker-pool, image-decode-bridge). This is a Vite
+  code-splitting warning, not a build failure.
+- Renderer `globe` chunk is 5.1 MB after minification. Consider adding
+  `manualChunks` for Cesium, HAL, or plugins.
+
+
+## Live Session Audit — 2025-09-15 (continued)
+
+### Completed immediate items
+
+1. `RUN_HARNESS` block removed from `src/main/index.ts` (already done).
+2. Stale `src/renderer/globe/SatelliteOverlay.tsx` removed (already done).
+3. Duplicate `detectionPlugin` registration removed (already done).
+4. Lightning feed deduplication added in `src/main/services/live/lightning.ts`.
+   - `strikes` is now a `Map<string, Strike>` keyed by `lightning:${ts}:${lat}:${lon}`.
+   - `getStrikes()` prunes by age and enforces `MAX_STRIKES`.
+   - New strikes overwrite existing identical keys instead of creating duplicates.
+   - `npx tsc --noEmit` still passes.
+5. Richer `makeMockViewer()` in `src/renderer/globe/plugins/plugin-harness.ts`.
+   - Added `wrap()`/`createMock()` fallback so unknown `viewer.*` properties do not crash.
+   - Implemented `entities`, `dataSources`, `imageryLayers`, `primitives`, `groundPrimitives`, `postProcessStages` collections with `add/remove/get/getById/length/values`.
+   - Added `camera`, `globe`, `scene`, `clock`, `skyAtmosphere`, `fog` and Cesium-style events (`preUpdate`, `postUpdate`, `changed`, `onTick`, etc.).
+   - `canvas` and `container` are real (or undefined) DOM-like elements.
+   - Full file passes `npx tsc --noEmit`.
+
+### Build result (second run)
+
+`npm run build` run again after harness-mock changes. Result:
+
+| Check | Result |
+|---|---|
+| `npx tsc --noEmit` | ✅ exit 0 |
+| `npm run compile:wasm` | ✅ `simd-kernels.wasm` (1505 bytes) |
+| `npm run copy:cesium` | ✅ Cesium assets copied |
+| Main bundle | ✅ `out/main/index.js` 328.32 kB |
+| Preload bundle | ✅ `out/preload/index.js` 5.99 kB |
+| Renderer bundle | ✅ `out/renderer/globe/index.html` + `assets/globe-iSaufcAN.js` 5,107.99 kB |
+| `plugin-harness.ts` | ✅ compiled into `assets/plugin-harness-DnhrZ0aI.js` |
+| Build exit code | **0** (success) |
+
+### Attempted harness execution
+
+- A temporary headless runner was created and removed.
+- Running the built `out/main/index.js` directly via `npx electron` resolves `require('electron')` to the `electron` npm package (a path string) rather than the Electron built-in, causing a runtime `commandLine`/`app` undefined error.
+- `npm run preview` (which uses `electron-vite preview`) starts the built app successfully, so the build is not broken — only the direct `npx electron <path>` invocation is.
+- The harness is therefore ready to be run, but must be triggered from inside the renderer (DevTools `await window.runPluginTests({ stepTimeoutMs: 30000 })`) or from an `electron-vite preview` / `npm run dev` session with a small auto-run patch.
+
+### Next step
+
+Run `window.runPluginTests()` from the renderer console and paste the returned `PluginTestReport` so the 41-plugin results can be recorded and any remaining mock gaps can be closed.
+
