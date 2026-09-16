@@ -1,7 +1,36 @@
 import * as Cesium from 'cesium'
 import type { GIBSLayer } from '@shared/types'
 
-/** Build a Cesium imagery provider for a GIBS layer (direct URL, no IPC). */
+/**
+ * Cesium built-in Natural Earth II — low-res global base that covers the poles
+ * (geographic tiling). Used as the permanent underlay so Web-Mercator Esri
+ * tiles don't leave polar holes.
+ */
+export function buildNaturalEarthProvider(): Cesium.ImageryProvider {
+  return new Cesium.UrlTemplateImageryProvider({
+    url: Cesium.buildModuleUrl('Assets/Textures/NaturalEarthII/{z}/{x}/{reverseY}.jpg'),
+    tilingScheme: new Cesium.GeographicTilingScheme(),
+    maximumLevel: 5,
+    credit: new Cesium.Credit('Natural Earth'),
+  })
+}
+
+/**
+ * NASA GIBS Blue Marble in EPSG:4326 — geographic tiling that reaches the poles
+ * and fills the Web Mercator holes left by Esri/Bing layers.
+ */
+export function buildGibs4326Provider(): Cesium.ImageryProvider {
+  return new Cesium.WebMapTileServiceImageryProvider({
+    url: 'https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/BlueMarble_NextGeneration/{Style}/default/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.jpeg',
+    layer: 'BlueMarble_NextGeneration',
+    style: 'default',
+    tileMatrixSetID: '500m',
+    format: 'image/jpeg',
+    maximumLevel: 5,
+    tilingScheme: new Cesium.GeographicTilingScheme(),
+    credit: new Cesium.Credit('NASA GIBS Blue Marble'),
+  })
+}
 export function buildGibsProvider(layer: GIBSLayer): Cesium.ImageryProvider {
   const date = 'default'
   const base = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best'
@@ -19,13 +48,17 @@ export function buildGibsProvider(layer: GIBSLayer): Cesium.ImageryProvider {
  * Includes Sentinel-2 imagery at zoom levels 13+ for many regions.
  * This is our "Sentinel-2 base layer" — it's the most reliable free
  * satellite imagery source that includes S2 data.
+ *
+ * Clamped to the Web Mercator latitude limits so it doesn't paint black
+ * tiles over the poles; the polar underlay shows through at high latitudes.
  */
 export function buildEsriProvider(): Cesium.ImageryProvider {
   return new Cesium.UrlTemplateImageryProvider({
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    // Cap at 17 — level 18-19 tiles are numerous and cause V8 heap exhaustion.
-    // Level 17 is ~1m resolution, more than enough for analysis.
-    maximumLevel: 17,
+    // Cap at 18 — ~0.6m/px at deepest zoom. Level 19 exists in some regions
+    // but quadruples tile requests; tileCacheSize (100) bounds memory.
+    maximumLevel: 18,
+    rectangle: Cesium.Rectangle.fromDegrees(-180, -85.0511, 180, 85.0511),
     credit: new Cesium.Credit('Esri World Imagery (includes Sentinel-2)'),
   })
 }

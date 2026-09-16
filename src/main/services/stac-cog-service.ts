@@ -35,6 +35,8 @@ export interface StacSearchOptions {
   endDate: string     // YYYY-MM-DD
   maxCloudCover: number
   formula: 'ndvi' | 'ndwi' | 'nbr'
+  /** Output grid resolution per side (default 1024, clamped 256–2048) */
+  resolution?: number
 }
 
 export interface StacComputeResult {
@@ -48,6 +50,18 @@ export interface StacComputeResult {
   formula: string
   durationMs: number
   backend: 'stac-cog'
+}
+
+export interface StacBandsResult {
+  bandA: Float32Array
+  bandB: Float32Array
+  width: number
+  height: number
+  bbox: { west: number; south: number; east: number; north: number }
+  sceneId: string
+  date: string
+  cloudCover: number
+  durationMs: number
 }
 
 interface StacItem {
@@ -113,8 +127,11 @@ export class StacCogService {
    * @param targetWidth  Desired output width (cells)
    * @param targetHeight Desired output height (cells)
    */
-  async compute(opts: StacSearchOptions, targetWidth = 512, targetHeight = 512): Promise<StacComputeResult> {
+  async compute(opts: StacSearchOptions, targetWidth?: number, targetHeight?: number): Promise<StacComputeResult> {
     const start = performance.now()
+    const res = Math.min(2048, Math.max(256, opts.resolution ?? 1024))
+    targetWidth = targetWidth ?? res
+    targetHeight = targetHeight ?? res
 
     // 1. Search for scenes
     const scenes = await this.search(opts)
@@ -174,6 +191,68 @@ export class StacCogService {
       formula: opts.formula,
       durationMs,
       backend: 'stac-cog',
+    }
+  }
+
+  /**
+   * Fetch two raw Sentinel-2 L2A bands for a WGS84 bbox.
+   * Returns reflectance Float32Arrays for renderer-side GPU compute.
+   */
+  async fetchBands(
+    opts: StacSearchOptions,
+    targetWidth?: number,
+    targetHeight?: number,
+  ): Promise<StacBandsResult> {
+    const start = performance.now()
+    const res = Math.min(2048, Math.max(256, opts.resolution ?? 1024))
+    targetWidth = targetWidth ?? res
+    targetHeight = targetHeight ?? res
+
+    const scenes = await this.search(opts)
+    if (scenes.length === 0) throw new Error('No Sentinel-2 scenes found for the requested criteria')
+
+    const scene = scenes[0]
+    const epsg = scene.properties['proj:epsg'] || 4326
+    const crs = `EPSG:${epsg}`
+
+    const { bandA, bandB } = this.getFormulaBands(opts.formula)
+    const assetA = BAND_ASSETS[bandA]
+    const assetB = BAND_ASSETS[bandB]
+
+    if (!scene.assets[assetA] || !scene.assets[assetB]) {
+      throw new Error(`Scene missing required assets: ${assetA}, ${assetB}`)
+    }
+
+    const [tiffA, tiffB] = await Promise.all([fromUrl(scene.assets[assetA].href), fromUrl(scene.assets[assetB].href)])
+    const [imageA, imageB] = await Promise.all([tiffA.getImage(), tiffB.getImage()])
+
+    const window = this.computeWindow(imageA, opts.west, opts.south, opts.east, opts.north, crs)
+    const width = Math.min(window.width, targetWidth)
+    const height = Math.min(window.height, targetHeight)
+
+    const dataA = await this.readWindow(imageA, window, width, height)
+    const dataB = await this.readWindow(imageB, window, width, height)
+
+    const bandAFloat = new Float32Array(width * height)
+    const bandBFloat = new Float32Array(width * height)
+    for (let i = 0; i < width * height; i++) {
+      bandAFloat[i] = dataA[i] / 10000.0
+      bandBFloat[i] = dataB[i] / 10000.0
+    }
+
+    const bbox = this.windowToWGS84(imageA, window, crs)
+    const durationMs = performance.now() - start
+
+    return {
+      bandA: bandAFloat,
+      bandB: bandBFloat,
+      width,
+      height,
+      bbox,
+      sceneId: scene.id,
+      date: scene.properties.datetime,
+      cloudCover: scene.properties['eo:cloud_cover'],
+      durationMs,
     }
   }
 

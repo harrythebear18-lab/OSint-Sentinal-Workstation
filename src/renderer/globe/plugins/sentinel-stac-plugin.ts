@@ -60,7 +60,7 @@ interface StacResult {
 export class SentinelStacPlugin implements EarthEnginePlugin {
   id = 'sentinel-stac'
   name = 'Sentinel-2 STAC/COG (real S2 bands)'
-  category = 'analysis' as const
+  category = 'imagery' as const
 
   private viewer: Cesium.Viewer | null = null
   private ipc: typeof window.api | null = null
@@ -71,6 +71,7 @@ export class SentinelStacPlugin implements EarthEnginePlugin {
   private startDate = this.defaultDate(-30)
   private endDate = this.defaultDate(0)
   private maxCloud = 20
+  private resolution = 1024
   private lastResult: StacResult | null = null
   private useViewBbox = true
 
@@ -105,6 +106,11 @@ export class SentinelStacPlugin implements EarthEnginePlugin {
       { type: 'input', id: 'startDate', label: 'Start Date', value: this.startDate },
       { type: 'input', id: 'endDate', label: 'End Date', value: this.endDate },
       { type: 'slider', id: 'maxCloud', label: 'Max Cloud', value: this.maxCloud, min: 0, max: 100, step: 5, unit: '%' },
+      { type: 'select', id: 'resolution', label: 'Resolution', value: String(this.resolution), options: [
+        { label: '512 px (fast)', value: '512' },
+        { label: '1024 px', value: '1024' },
+        { label: '2048 px (max)', value: '2048' },
+      ]},
       { type: 'toggle', id: 'useView', label: 'Use Viewport BBox', value: this.useViewBbox },
       { type: 'separator', id: 'sep1' },
       { type: 'button', id: 'compute', label: 'Fetch S2 COG', variant: 'primary' },
@@ -126,6 +132,8 @@ export class SentinelStacPlugin implements EarthEnginePlugin {
       this.endDate = value
     } else if (id === 'maxCloud' && typeof value === 'number') {
       this.maxCloud = value
+    } else if (id === 'resolution' && typeof value === 'string') {
+      this.resolution = Number(value)
     } else if (id === 'useView' && typeof value === 'boolean') {
       this.useViewBbox = value
     } else if (id === 'compute') {
@@ -179,6 +187,7 @@ export class SentinelStacPlugin implements EarthEnginePlugin {
         endDate: this.endDate,
         maxCloudCover: this.maxCloud,
         formula: this.formula,
+        resolution: this.resolution,
       }) as StacResult
 
       if (result.error) {
@@ -210,7 +219,7 @@ export class SentinelStacPlugin implements EarthEnginePlugin {
       const rectangle = Cesium.Rectangle.fromDegrees(
         result.bbox.west, result.bbox.south, result.bbox.east, result.bbox.north,
       )
-      const provider = new Cesium.SingleTileImageryProvider({ url, rectangle })
+      const provider = new Cesium.SingleTileImageryProvider({ url, rectangle, tileWidth: result.width, tileHeight: result.height })
       if (!this.viewer) return
       this.imageryLayer = this.viewer.imageryLayers.addImageryProvider(provider)
       if (this.imageryLayer) {
