@@ -22,7 +22,7 @@ interface RouteResult {
 export class RoutesPlugin implements EarthEnginePlugin {
   id = 'routes'
   name = 'Routes (A* + Tobler)'
-  category = 'analysis' as const
+  category = 'mapping' as const
 
   private viewer: Cesium.Viewer | null = null
   private dataSource: Cesium.CustomDataSource | null = null

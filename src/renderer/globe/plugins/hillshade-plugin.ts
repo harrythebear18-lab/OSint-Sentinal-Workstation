@@ -20,7 +20,7 @@ import { computeDispatcher } from '../hal/compute-dispatcher'
 export class HillshadePlugin implements EarthEnginePlugin {
   id = 'hillshade'
   name = 'Hillshade (DEM Compute)'
-  category = 'analysis' as const
+  category = 'terrain' as const
 
   private viewer: Cesium.Viewer | null = null
   private imageryLayer: Cesium.ImageryLayer | null = null
@@ -118,16 +118,14 @@ export class HillshadePlugin implements EarthEnginePlugin {
       }
 
       // Dispatch hillshade computation
-      const azimuthRad = (this.azimuth * Math.PI) / 180
-      const altitudeRad = (this.altitude * Math.PI) / 180
-
+      // Dispatcher converts degrees → radians for WebGPU and CPU worker backends
       const result = await computeDispatcher.dispatch('hillshade', {
         width: demData.width,
         height: demData.height,
         input: new Float32Array(demData.elev),
         cellSizeX: demData.cellSizeX,
         cellSizeY: demData.cellSizeY,
-        params: new Float32Array([azimuthRad, altitudeRad]),
+        params: new Float32Array([this.azimuth, this.altitude]),
       })
 
       if (result.backend === 'noop' || result.output.length === 0) {
@@ -148,6 +146,8 @@ export class HillshadePlugin implements EarthEnginePlugin {
       const provider = new Cesium.SingleTileImageryProvider({
         url: blobUrl,
         rectangle,
+        tileWidth: demData.width,
+        tileHeight: demData.height,
       })
 
       this.imageryLayer = this.viewer.imageryLayers.addImageryProvider(provider)

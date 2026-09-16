@@ -301,7 +301,7 @@ const SPL_RAMP: [number, number, number, number][] = [
 export class AcousticPlugin implements EarthEnginePlugin {
   id = 'acoustic'
   name = 'Acoustic Propagation (Outdoor Sound)'
-  category = 'analysis' as const
+  category = 'terrain' as const
 
   private viewer: Cesium.Viewer | null = null
   private ipc: typeof window.api | null = null
@@ -663,7 +663,7 @@ export class AcousticPlugin implements EarthEnginePlugin {
       const rectangle = Cesium.Rectangle.fromDegrees(
         this.lastBbox.west, this.lastBbox.south, this.lastBbox.east, this.lastBbox.north,
       )
-      const provider = new Cesium.SingleTileImageryProvider({ url: blobUrl, rectangle })
+      const provider = new Cesium.SingleTileImageryProvider({ url: blobUrl, rectangle, tileWidth: this.gridSize, tileHeight: this.gridSize })
       this.imageryLayer = this.viewer.imageryLayers.addImageryProvider(provider)
       this.imageryLayer.alpha = 0.6
 

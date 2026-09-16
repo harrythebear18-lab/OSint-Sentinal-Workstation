@@ -15,7 +15,7 @@ type RiskZone = FallRiskResponse['zones'][number]
 export class FallRiskPlugin implements EarthEnginePlugin {
   id = 'fall-risk'
   name = 'Fall Risk (Terrain Hazard)'
-  category = 'analysis' as const
+  category = 'mission' as const
 
   private viewer: Cesium.Viewer | null = null
   private dataSource: Cesium.CustomDataSource | null = null

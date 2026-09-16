@@ -23,14 +23,17 @@ interface CategoryMeta {
 }
 
 const CATEGORIES: CategoryMeta[] = [
-  { key: 'globe',          label: 'TIER 1 — WORLD INTELLIGENCE',  color: '#4a9eff', icon: '🌍' },
-  { key: 'analysis',       label: 'TIER 2 — MOVEMENT & BEHAVIOUR', color: '#4aff8a', icon: '🧭' },
-  { key: 'live',           label: 'TIER 3 — LIVE FEEDS',           color: '#ff8a4a', icon: '📡' },
-  { key: 'climate',        label: 'TIER 3b — CLIMATE & OCEAN',     color: '#4affd4', icon: '🌊' },
-  { key: 'infrastructure', label: 'TIER 3c — INFRASTRUCTURE',      color: '#ffea4a', icon: '⚡' },
-  { key: 'ai',             label: 'TIER 4 — AI & VISION',          color: '#a04aff', icon: '🧠' },
-  { key: 'export',         label: 'TIER 5 — MISSION LOGIC',        color: '#ffd44a', icon: '📋' },
-  { key: 'vr',             label: 'VR / OPENXR',                   color: '#ff4a8a', icon: '🥽' },
+  { key: 'terrain',        label: 'TERRAIN & DEM',         color: '#4a9eff', icon: '⛰️' },
+  { key: 'imagery',        label: 'IMAGERY & SPECTRAL',    color: '#4ad4ff', icon: '🛰️' },
+  { key: 'mapping',        label: 'MAPS & ROUTING',        color: '#8aff4a', icon: '🗺️' },
+  { key: 'mission',        label: 'MISSION & SAR',         color: '#4aff8a', icon: '🧭' },
+  { key: 'live',           label: 'LIVE FEEDS',            color: '#ff8a4a', icon: '📡' },
+  { key: 'climate',        label: 'CLIMATE & OCEAN',       color: '#4affd4', icon: '🌊' },
+  { key: 'infrastructure', label: 'INFRASTRUCTURE',        color: '#ffea4a', icon: '⚡' },
+  { key: 'ai',             label: 'AI & VISION',           color: '#a04aff', icon: '🧠' },
+  { key: 'media',          label: 'MEDIA & EXPORT',        color: '#ffd44a', icon: '📹' },
+  { key: 'system',         label: 'SYSTEM',                color: '#8a9aa8', icon: '�️' },
+  { key: 'vr',             label: 'VR / OPENXR',           color: '#ff4a8a', icon: '🥽' },
 ]
 
 function statusColor(status: string): string {

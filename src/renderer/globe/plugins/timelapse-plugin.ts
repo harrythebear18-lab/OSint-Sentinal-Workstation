@@ -25,7 +25,7 @@ type RecordState = 'idle' | 'recording' | 'encoding' | 'done' | 'error'
 export class TimelapsePlugin implements EarthEnginePlugin {
   id = 'timelapse'
   name = 'Timelapse Export (WebCodecs VideoEncoder)'
-  category = 'export' as const
+  category = 'media' as const
 
   private viewer: Cesium.Viewer | null = null
   private exporter: TimelapseExporter | null = null

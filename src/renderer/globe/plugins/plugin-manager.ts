@@ -105,7 +105,7 @@ export interface EarthEnginePlugin {
   /** Human-readable name */
   name: string
   /** Category for UI grouping */
-  category: 'globe' | 'analysis' | 'live' | 'climate' | 'infrastructure' | 'ai' | 'export' | 'vr'
+  category: 'terrain' | 'imagery' | 'mapping' | 'mission' | 'live' | 'climate' | 'infrastructure' | 'ai' | 'media' | 'system' | 'vr'
   /** Attach to globe — called once when plugin is enabled */
   register(ctx: PluginContext): void
   /** Detach cleanly — called when plugin is disabled or app closes */

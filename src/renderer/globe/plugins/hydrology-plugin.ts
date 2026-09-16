@@ -22,7 +22,7 @@ import type { RunoffAnalysisResponse, WatershedDivide } from '@shared/types'
 export class HydrologyPlugin implements EarthEnginePlugin {
   id = 'hydrology'
   name = 'Hydrology (Runoff + Flood)'
-  category = 'analysis' as const
+  category = 'terrain' as const
 
   private viewer: Cesium.Viewer | null = null
   private runoffSource: Cesium.CustomDataSource | null = null

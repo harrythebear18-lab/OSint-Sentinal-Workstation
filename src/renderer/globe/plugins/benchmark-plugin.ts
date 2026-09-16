@@ -34,7 +34,7 @@ const WORKLOADS: { label: string; task: ComputeTask; width: number; height: numb
 export class BenchmarkPlugin implements EarthEnginePlugin {
   id = 'benchmark'
   name = 'HAL Benchmark'
-  category = 'analysis' as const
+  category = 'system' as const
 
   private status: PluginStats = { count: 0, status: 'nominal' }
   private running = false

@@ -191,6 +191,30 @@ export class VolcanoPlugin implements EarthEnginePlugin {
     if (id === 'visible' && typeof value === 'boolean') {
       this.show = value
       if (this.dataSource) this.dataSource.show = value
+      if (this.simDataSource) this.simDataSource.show = value && this.showSim
+      if (this.worldOverlay) {
+        if (value) {
+          // Re-register cards for erupting volcanoes
+          for (const v of this.volcanoes.values()) {
+            const isErupting = v.colorCode === 'ORANGE' || v.colorCode === 'RED'
+            if (isErupting) {
+              const colors = ALERT_COLORS[v.colorCode]
+              this.worldOverlay.registerCard({
+                id: `volcano:${v.id}`,
+                lat: v.lat,
+                lon: v.lon,
+                title: v.name,
+                subtitle: `${v.colorCode} • ${v.type}`,
+                category: 'volcano',
+                priority: v.colorCode === 'RED' ? 10 : v.colorCode === 'ORANGE' ? 8 : 5,
+                color: colors.hex,
+              })
+            }
+          }
+        } else {
+          this.worldOverlay.clearCategory('volcano')
+        }
+      }
     } else if (id === 'sim' && typeof value === 'boolean') {
       this.showSim = value
       if (this.simDataSource) this.simDataSource.show = value
@@ -368,7 +392,6 @@ export class VolcanoPlugin implements EarthEnginePlugin {
         outlineColor: new Cesium.ConstantProperty(Cesium.Color.WHITE.withAlpha(0.8)),
         outlineWidth: new Cesium.ConstantProperty(isErupting ? 2 : 1),
         heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-        disableDepthTestDistance: isErupting ? Number.POSITIVE_INFINITY : undefined,
       },
       properties: {
         name: v.name,

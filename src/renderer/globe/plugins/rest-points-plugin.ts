@@ -13,7 +13,7 @@ import type { RestPoint, RestPointsResponse } from '@shared/types'
 export class RestPointsPlugin implements EarthEnginePlugin {
   id = 'rest-points'
   name = 'Rest Points (Shelter Scoring)'
-  category = 'analysis' as const
+  category = 'mission' as const
 
   private viewer: Cesium.Viewer | null = null
   private dataSource: Cesium.CustomDataSource | null = null

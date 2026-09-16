@@ -26,6 +26,7 @@ export class SpaceWeatherPlugin implements EarthEnginePlugin {
   register(ctx: PluginContext): void {
     this.viewer = ctx.viewer
     this.dataSource = new Cesium.CustomDataSource('space-weather')
+    this.dataSource.show = this.show
     ctx.viewer.dataSources.add(this.dataSource)
     this.status = { count: 0, status: 'loading' }
 
@@ -83,37 +84,48 @@ export class SpaceWeatherPlugin implements EarthEnginePlugin {
     if (!this.dataSource) return
     this.currentData = data
 
+    // Status first so the UI gets data even if the geometry fails
+    this.status = {
+      count: data.kpIndex != null ? 2 : 0,
+      status: 'nominal',
+    }
+
+    const hasData = data.kpIndex != null || data.xrayFlareClass != null
+    if (!hasData) {
+      this.status.status = 'degraded'
+      this.status.error = 'SWPC data unavailable'
+    } else if (Date.now() - (data.timestamp ?? 0) > 15 * 60 * 1000) {
+      this.status.status = 'stale'
+      this.status.error = 'using last known space-weather values'
+    }
+
     // Clear old aurora entities
     for (const e of this.auroraEntities) {
       this.dataSource.entities.remove(e)
     }
     this.auroraEntities = []
 
-    // Render aurora oval at poles based on Kp index
+    // Render aurora oval at poles based on Kp index — show it for any measured Kp
     const kp = data.kpIndex ?? 0
-    if (kp > 3) {
-      // Higher Kp = larger aurora oval
-      const radiusDeg = 15 + kp * 3 // degrees from pole
-      for (const pole of [90, -90]) {
-        const entity = this.dataSource.entities.add({
-          id: `aurora:${pole > 0 ? 'north' : 'south'}`,
-          position: Cesium.Cartesian3.fromDegrees(0, pole, 100000),
-          ellipse: {
-            semiMajorAxis: new Cesium.ConstantProperty(radiusDeg * 111000),
-            semiMinorAxis: new Cesium.ConstantProperty(radiusDeg * 111000),
-            material: Cesium.Color.fromBytes(0, 255, 200, 40),
-            outline: true,
-            outlineColor: Cesium.Color.fromBytes(0, 255, 200, 120),
-          },
-        } as any)
-        this.auroraEntities.push(entity)
+    if (data.kpIndex != null) {
+      try {
+        // Kp 0 = ~2° from pole; Kp 9 = ~38° from pole
+        const radiusDeg = 2 + kp * 4
+        for (const pole of [89.5, -89.5]) {
+          const entity = this.dataSource.entities.add({
+            id: `aurora:${pole > 0 ? 'north' : 'south'}`,
+            position: Cesium.Cartesian3.fromDegrees(0, pole, 100000),
+            ellipse: {
+              semiMajorAxis: radiusDeg * 111000,
+              semiMinorAxis: radiusDeg * 111000,
+              material: Cesium.Color.fromBytes(0, 255, 120, 80),
+            } as any,
+          } as any)
+          this.auroraEntities.push(entity)
+        }
+      } catch (err) {
+        console.error('[space-weather] aurora geometry failed:', err)
       }
-    }
-
-    this.status = {
-      count: kp > 3 ? 2 : 0,
-      status: 'nominal',
-      error: data.xrayFlareClass ? `X-ray: ${data.xrayFlareClass}` : undefined,
     }
   }
 }

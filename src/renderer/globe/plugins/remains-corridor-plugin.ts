@@ -19,7 +19,7 @@ import type { RemainsCorridorResponse, CorridorPath, DepositionZone, ChokePoint 
 export class RemainsCorridorPlugin implements EarthEnginePlugin {
   id = 'remains-corridor'
   name = 'Remains Corridor (Fall → Flow)'
-  category = 'analysis' as const
+  category = 'mission' as const
 
   private viewer: Cesium.Viewer | null = null
   private dataSource: Cesium.CustomDataSource | null = null

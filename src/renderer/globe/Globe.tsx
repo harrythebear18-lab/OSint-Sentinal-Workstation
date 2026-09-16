@@ -172,17 +172,17 @@ export default function Globe({
       // White matches the ice caps shown by the underlying pole-filler imagery layer.
       globe.baseColor = Cesium.Color.WHITE
       v.scene.backgroundColor = Cesium.Color.BLACK
-      // Visual atmosphere: ground haze + horizon fog for depth and aurora visibility
-      globe.showGroundAtmosphere = true
+      // Ground atmosphere + dynamic atmosphere lighting run a full-screen haze
+      // pass and sun math every render — expensive and washes out imagery.
+      // Fog stays on at half density for depth cueing (cheap per-pixel mix).
+      globe.showGroundAtmosphere = false
       scene.fog.enabled = true
-      // Halve fog density — default 2e-4 washes out contrast at mid altitudes
       scene.fog.density = 0.0001
       if (scene.skyAtmosphere) scene.skyAtmosphere.show = true
-      // Sun lighting always on — gives the day/night terminator and
-      // directional terrain shading (the "depth" feel). The hillshade toggle
-      // only controls the 12x animated cycle.
-      scene.globe.enableLighting = true
-      scene.globe.dynamicAtmosphereLighting = true
+      // Sun lighting gated behind the hillshade toggle — per-tile lighting
+      // costs GPU on every render, so it's off until explicitly enabled.
+      scene.globe.enableLighting = false
+      scene.globe.dynamicAtmosphereLighting = false
       // FXAA is cheaper than MSAA
       scene.postProcessStages.fxaa.enabled = true
       // Disable bloom (expensive)
@@ -612,9 +612,7 @@ export default function Globe({
           }
           rafId = requestAnimationFrame(renderLoop)
         } else {
-          // Keep lighting on — only stop the animated day/night cycle.
-          // Without this the globe reverts to flat, uniformly-lit imagery.
-          v.scene.globe.enableLighting = true
+          v.scene.globe.enableLighting = false
           v.clock.shouldAnimate = true
           v.clock.multiplier = 1.0
           v.scene.maximumRenderTimeChange = Infinity

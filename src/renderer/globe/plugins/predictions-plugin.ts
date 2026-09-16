@@ -23,7 +23,7 @@ function severityColor(severity: string): Cesium.Color {
 export class PredictionsPlugin implements EarthEnginePlugin {
   id = 'predictions'
   name = 'Predictions'
-  category = 'analysis' as const
+  category = 'mission' as const
 
   private viewer: Cesium.Viewer | null = null
   private dataSource: Cesium.CustomDataSource | null = null

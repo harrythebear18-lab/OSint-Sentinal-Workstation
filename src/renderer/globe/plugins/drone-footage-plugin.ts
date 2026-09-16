@@ -29,7 +29,7 @@ interface ExtractedFrame {
 export class DroneFootagePlugin implements EarthEnginePlugin {
   id = 'drone-footage'
   name = 'Drone Footage (VideoDecoder)'
-  category = 'analysis' as const
+  category = 'media' as const
 
   private viewer: Cesium.Viewer | null = null
   private extractor: VideoFrameExtractor | null = null

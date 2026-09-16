@@ -19,7 +19,7 @@ import { computeDispatcher } from '../hal/compute-dispatcher'
 export class AnomalyPlugin implements EarthEnginePlugin {
   id = 'anomaly'
   name = 'Anomaly Detection (Terrain)'
-  category = 'analysis' as const
+  category = 'terrain' as const
 
   private viewer: Cesium.Viewer | null = null
   private dataSource: Cesium.CustomDataSource | null = null

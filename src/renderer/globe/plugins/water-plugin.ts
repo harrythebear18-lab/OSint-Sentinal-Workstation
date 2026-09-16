@@ -23,7 +23,7 @@ const MAX_VISIBLE_ENTITIES = 50000
 export class WaterPlugin implements EarthEnginePlugin {
   id = 'water'
   name = 'Water (OSM Hydrology)'
-  category = 'analysis' as const
+  category = 'mapping' as const
 
   private viewer: Cesium.Viewer | null = null
   private dataSource: Cesium.CustomDataSource | null = null

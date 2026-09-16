@@ -15,7 +15,7 @@ import type { ImportResult, ImportedFeature } from '@shared/types'
 export class ExportImportPlugin implements EarthEnginePlugin {
   id = 'export-import'
   name = 'Export / Import (GeoJSON/KML)'
-  category = 'export' as const
+  category = 'media' as const
 
   private viewer: Cesium.Viewer | null = null
   private dataSource: Cesium.CustomDataSource | null = null

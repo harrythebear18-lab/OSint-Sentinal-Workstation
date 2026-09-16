@@ -15,7 +15,7 @@ type CanopyZone = CanopyAnalysisResponse['zones'][number]
 export class CanopyPlugin implements EarthEnginePlugin {
   id = 'canopy'
   name = 'Canopy / Vegetation'
-  category = 'analysis' as const
+  category = 'imagery' as const
 
   private viewer: Cesium.Viewer | null = null
   private dataSource: Cesium.CustomDataSource | null = null

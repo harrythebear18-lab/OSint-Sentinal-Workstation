@@ -13,7 +13,7 @@ import type { SearchZonesResponse, SearchZone } from '@shared/types'
 export class SearchZonesPlugin implements EarthEnginePlugin {
   id = 'search-zones'
   name = 'Search Zones (LKP Rings)'
-  category = 'analysis' as const
+  category = 'mission' as const
 
   private viewer: Cesium.Viewer | null = null
   private dataSource: Cesium.CustomDataSource | null = null

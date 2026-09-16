@@ -178,9 +178,11 @@ export class WeatherPlugin implements EarthEnginePlugin {
   // ── Internal ──
 
   private async fetchRadarData(): Promise<RadarData> {
-    const res = await fetch('https://api.rainviewer.com/public/weather-maps.json')
-    if (!res.ok) throw new Error(`RainViewer API error: ${res.status}`)
-    const data = await res.json()
+    // RainViewer sends duplicate CORS headers from the renderer — proxy through main
+    const buf = await window.api.invoke('hal:fetch-buffer', { url: 'https://api.rainviewer.com/public/weather-maps.json', timeoutMs: 10000 }) as number[] | null
+    if (!buf) throw new Error('RainViewer API returned empty')
+    const text = new TextDecoder().decode(new Uint8Array(buf))
+    const data = JSON.parse(text)
     return {
       host: data.host,
       radarPast: (data.radar?.past || []).map((f: { time: number; path: string }) => ({ time: f.time, path: f.path })),

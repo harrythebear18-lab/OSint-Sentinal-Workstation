@@ -26,7 +26,7 @@ const MAX_VISIBLE_ENTITIES = 50000
 export class RoadsPlugin implements EarthEnginePlugin {
   id = 'roads'
   name = 'Roads (OSM Vector Network)'
-  category = 'analysis' as const
+  category = 'mapping' as const
 
   private viewer: Cesium.Viewer | null = null
   private dataSource: Cesium.CustomDataSource | null = null

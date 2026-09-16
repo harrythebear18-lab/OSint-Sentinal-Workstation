@@ -48,54 +48,56 @@ import { detectionPlugin } from './detection-plugin'
 
 // Register all plugins (doesn't activate them)
 pluginManager.register([
-  // Tier 1 — Core World Intelligence
-  weatherPlugin,
-  earthquakesPlugin,
-  volcanoPlugin,
-  acousticPlugin,
-  timelapsePlugin,
-  droneFootagePlugin,
-  sentinelStacPlugin,
-  benchmarkPlugin,
+  // Terrain & DEM
   slopeBandsPlugin,
   hillshadePlugin,
-  bandMathPlugin,
   anomalyPlugin,
   hydrologyPlugin,
+  acousticPlugin,
+  // Imagery & Spectral
+  sentinelStacPlugin,
+  bandMathPlugin,
+  canopyPlugin,
+  // Maps & Routing
   waterPlugin,
   roadsPlugin,
-  infrastructurePlugin,
-  // Tier 2 — Movement & Behaviour
   routesPlugin,
-  canopyPlugin,
+  // Mission & SAR
   behaviorEnginePlugin,
-  // Tier 3 — Live Feeds
-  firesPlugin,
-  aircraftPlugin,
-  vesselsPlugin,
-  lightningPlugin,
-  // Tier 3b — Climate / Ocean (ported from OGOS)
-  climateStationsPlugin,
-  stormsPlugin,
-  spaceWeatherPlugin,
-  // Tier 3c — Infrastructure (ported from OGOS)
-  gridAssetsPlugin,
-  networkPlugin,
-  // Tier 4 — AI & Vision
-  clipPlugin,
-  visionPlugin,
-  webSearchPlugin,
-  detectionPlugin,
-  // Tier 4b — Predictions (ported from OGOS)
   predictionsPlugin,
-  // Tier 5 — Mission Logic
   searchZonesPlugin,
   restPointsPlugin,
   fallRiskPlugin,
   remainsCorridorPlugin,
   caseProfilesPlugin,
-  exportImportPlugin,
   hikerProfilePlugin,
+  // Live Feeds
+  weatherPlugin,
+  earthquakesPlugin,
+  volcanoPlugin,
+  firesPlugin,
+  aircraftPlugin,
+  vesselsPlugin,
+  lightningPlugin,
+  // Climate & Ocean
+  climateStationsPlugin,
+  stormsPlugin,
+  spaceWeatherPlugin,
+  // Infrastructure
+  infrastructurePlugin,
+  gridAssetsPlugin,
+  networkPlugin,
+  // AI & Vision
+  clipPlugin,
+  visionPlugin,
+  webSearchPlugin,
+  detectionPlugin,
+  // Media & Export
+  timelapsePlugin,
+  droneFootagePlugin,
+  exportImportPlugin,
+  // System
+  benchmarkPlugin,
   // VR / OpenXR
   vrPlugin,
 ])

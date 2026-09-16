@@ -16,7 +16,7 @@ import { clusterSlopeBands, SLOPE_THRESHOLDS } from '@shared/slope-utils'
 export class SlopeBandsPlugin implements EarthEnginePlugin {
   id = 'slope-bands'
   name = 'Slope Bands (DEM Analysis)'
-  category = 'analysis' as const
+  category = 'terrain' as const
 
   private viewer: Cesium.Viewer | null = null
   private dataSource: Cesium.CustomDataSource | null = null
@@ -126,6 +126,16 @@ export class SlopeBandsPlugin implements EarthEnginePlugin {
         })
 
         if (result.backend !== 'noop' && result.output.length > 0) {
+          // Diagnostic: min / max slope value
+          let minS = Infinity, maxS = -Infinity
+          for (let i = 0; i < result.output.length; i++) {
+            const v = result.output[i]
+            if (!Number.isFinite(v)) continue
+            if (v < minS) minS = v
+            if (v > maxS) maxS = v
+          }
+          console.warn(`[slope-bands] slope range: ${minS.toFixed(2)}° - ${maxS.toFixed(2)}°`)
+
           // Cluster slope bands in the renderer
           const threshold = SLOPE_THRESHOLDS[this.profile]
           const bands = clusterSlopeBands(
