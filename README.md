@@ -27,6 +27,8 @@ built on CesiumJS, live public feeds, real DEM analysis, and a Hardware
 Abstraction Layer that dispatches work to WebGPU, WASM SIMD, WebCodecs,
 and a `worker_threads` pool with automatic fallback.
 
+![OSINT Sentinel Workstation — cockpit view: Cesium globe with live Argo buoy network, satellite orbital tracks, grouped plugin panel, and entity inspector](docs/screenshots/cockpit.png)
+
 ## What it is
 
 - **Single-window cockpit** — one Cesium 3D globe, HUD overlays, left/right dock
