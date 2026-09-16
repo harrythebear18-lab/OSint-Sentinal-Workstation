@@ -56,8 +56,10 @@ export function registerComputeFallback(): void {
         workerData.cellSizeX = payload.cellSizeX ?? payload.params?.[0] ?? 1
         workerData.cellSizeY = payload.cellSizeY ?? payload.params?.[1] ?? 1
       } else if (task === 'hillshade') {
-        workerData.azimuth = payload.params?.[0] ?? (315 * Math.PI / 180)
-        workerData.altitude = payload.params?.[1] ?? (45 * Math.PI / 180)
+        // Dispatcher sends degrees, worker expects radians
+        const deg2rad = Math.PI / 180
+        workerData.azimuth = (payload.params?.[0] ?? 315) * deg2rad
+        workerData.altitude = (payload.params?.[1] ?? 45) * deg2rad
       } else if (task === 'anomaly') {
         workerData.blurRadius = payload.params?.[0] ?? 5
       } else if (task === 'runoff') {

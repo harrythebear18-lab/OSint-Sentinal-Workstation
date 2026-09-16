@@ -144,6 +144,28 @@ export const GIBS_LAYERS: GIBSLayer[] = [
     description: 'Meteosat-11 SEVIRI true color — 15-minute geostationary imagery',
     category: 'geostationary',
   },
+  {
+    id: 'omi-ozone',
+    name: 'OMI Ozone (Total Column)',
+    gibsLayer: 'OMI_Ozone_TOMS_Total_Column',
+    format: 'png',
+    tileMatrixSet: 'GoogleMapsCompatible_Level6',
+    maxZoom: 6,
+    temporalResolution: 'Daily',
+    description: 'Aura OMI total column ozone — TOMS-like, daily',
+    category: 'atmosphere',
+  },
+  {
+    id: 'modis-aerosol',
+    name: 'MODIS Aerosol Optical Depth',
+    gibsLayer: 'MODIS_Terra_Aerosol',
+    format: 'png',
+    tileMatrixSet: 'GoogleMapsCompatible_Level6',
+    maxZoom: 6,
+    temporalResolution: 'Daily',
+    description: 'Terra MODIS aerosol optical depth — 3 km, daily',
+    category: 'atmosphere',
+  },
 ]
 
 const GIBS_BASE = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best'

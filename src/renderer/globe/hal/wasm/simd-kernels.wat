@@ -459,7 +459,7 @@
   )
 
   ;; ── Exports ──
-  (export "memory" (memory 0))
+  ;; Note: memory is already exported inline via (memory (export "memory") 16) above.
   (export "band_math" (func $band_math))
   (export "box_blur" (func $box_blur))
   (export "slope" (func $slope))

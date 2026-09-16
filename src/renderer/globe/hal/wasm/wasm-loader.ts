@@ -51,24 +51,14 @@ export async function initWasmSimd(): Promise<boolean> {
     // Try multiple paths: Vite dev server, production build, and file:// fallback
     let wasmBytes: ArrayBuffer | null = null
 
-    // Path 1: import.meta.url (works with Vite asset handling in dev and prod)
-    try {
-      const wasmUrl = new URL('./wasm/simd-kernels.wasm', import.meta.url)
-      const response = await fetch(wasmUrl)
-      if (response.ok) {
-        wasmBytes = await response.arrayBuffer()
-      }
-    } catch { /* try next path */ }
-
-    // Path 2: relative to public dir (Vite serves public/ at root)
-    if (!wasmBytes) {
-      try {
-        const response = await fetch('/simd-kernels.wasm')
-        if (response.ok) {
-          wasmBytes = await response.arrayBuffer()
-        }
-      } catch { /* try next path */ }
-    }
+    // Resolve from the app HTML (globe/index.html), which is one level below
+    // the renderer root in dev and prod. public/simd-kernels.wasm lives at the
+    // Vite/Electron root, so "../../../" walks from globe/ to the app root.
+    const base = typeof window !== 'undefined' ? window.location.href : import.meta.url
+    const wasmUrl = new URL('../../../simd-kernels.wasm', base)
+    const response = await fetch(wasmUrl)
+    if (!response.ok) throw new Error(`HTTP ${response.status} for ${wasmUrl}`)
+    wasmBytes = await response.arrayBuffer()
 
     if (!wasmBytes) throw new Error('Could not load simd-kernels.wasm from any path')
 

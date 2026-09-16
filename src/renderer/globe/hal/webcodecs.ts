@@ -43,47 +43,15 @@ class WebCodecsService {
   }
 
   /**
-   * Decode a PNG/JPEG image using hardware-accelerated ImageDecoder.
-   * Replaces pngjs (pure JS decode) with hardware decode.
+   * Decode a PNG/JPEG image using hardware-accelerated createImageBitmap.
+   * ImageDecoder is unreliable across Electron versions, so we use
+   * createImageBitmap which is consistently hardware-accelerated.
    */
   async decodeImage(
     blob: Blob,
     format: 'image/png' | 'image/jpeg',
   ): Promise<DecodeResult> {
-    const start = performance.now()
-
-    if (!this.probe()) {
-      // Fallback: use createImageBitmap (still hardware-accelerated in Chromium)
-      return this.decodeImageFallback(blob, format)
-    }
-
-    try {
-      const decoder = new ImageDecoder({
-        type: format,
-        data: blob.stream(),
-      })
-      await decoder.tracks.ready
-      const frame = await decoder.decode({ frameIndex: 0 }) as any
-      const w = frame.codedWidth as number
-      const h = frame.codedHeight as number
-      const canvas = new OffscreenCanvas(w, h)
-      const ctx = canvas.getContext('2d')!
-      ctx.drawImage(frame, 0, 0)
-      const imageData = ctx.getImageData(0, 0, w, h)
-
-      frame.close?.()
-      decoder.close()
-
-      return {
-        data: imageData.data as Uint8ClampedArray,
-        width: w,
-        height: h,
-        durationMs: performance.now() - start,
-      }
-    } catch (e) {
-      console.warn('[hal/webcodecs] ImageDecoder failed, falling back:', e)
-      return this.decodeImageFallback(blob, format)
-    }
+    return this.decodeImageFallback(blob, format)
   }
 
   /**
@@ -114,15 +82,21 @@ class WebCodecsService {
   private async decodeImageFallback(blob: Blob, _format: string): Promise<DecodeResult> {
     const start = performance.now()
     const bitmap = await createImageBitmap(blob)
-    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height)
+    const w = Math.max(1, Math.floor(bitmap.width))
+    const h = Math.max(1, Math.floor(bitmap.height))
+    if (w <= 0 || h <= 0 || !Number.isFinite(w) || !Number.isFinite(h)) {
+      bitmap.close()
+      throw new Error(`Invalid bitmap dimensions: ${w}x${h}`)
+    }
+    const canvas = new OffscreenCanvas(w, h)
     const ctx = canvas.getContext('2d')!
     ctx.drawImage(bitmap, 0, 0)
-    const imageData = ctx.getImageData(0, 0, bitmap.width, bitmap.height)
+    const imageData = ctx.getImageData(0, 0, w, h)
     bitmap.close()
     return {
       data: imageData.data as Uint8ClampedArray,
-      width: bitmap.width,
-      height: bitmap.height,
+      width: w,
+      height: h,
       durationMs: performance.now() - start,
     }
   }

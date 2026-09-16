@@ -54,7 +54,7 @@ export interface ComputeResult {
 
 const SHADERS: Record<ComputeKernel, string> = {
   'dem-slope': /* wgsl */ `
-struct Params { width: u32, height: u32, _pad0: u32, _pad1: u32 };
+struct Params { width: u32, height: u32, cellSizeX: f32, cellSizeY: f32 };
 @group(0) @binding(0) var<uniform> params: Params;
 @group(0) @binding(1) var<storage, read> input: array<f32>;
 @group(0) @binding(2) var<storage, read_write> output: array<f32>;
@@ -82,11 +82,13 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
   let s  = input[(y + 1u) * params.width + x];
   let se = input[(y + 1u) * params.width + (x + 1u)];
 
-  let dzdx = ((ne + 2.0 * e + se) - (nw + 2.0 * w + sw)) / 8.0;
-  let dzdy = ((sw + 2.0 * s + se) - (nw + 2.0 * n + ne)) / 8.0;
+  // Divide by cell size to get true rise/run, then convert to degrees
+  let dzdx = (((ne + 2.0 * e + se) - (nw + 2.0 * w + sw)) / 8.0) / params.cellSizeX;
+  let dzdy = (((sw + 2.0 * s + se) - (nw + 2.0 * n + ne)) / 8.0) / params.cellSizeY;
 
-  let slope = atan(sqrt(dzdx * dzdx + dzdy * dzdy));
-  output[idx] = slope;
+  let slopeRad = atan(sqrt(dzdx * dzdx + dzdy * dzdy));
+  let slopeDeg = slopeRad * 57.29577951308232; // 180/pi
+  output[idx] = slopeDeg;
 }
 `,
 
@@ -197,9 +199,8 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
   'anomaly': /* wgsl */ `
 struct Params { width: u32, height: u32, threshold: f32, _pad: u32 };
 @group(0) @binding(0) var<uniform> params: Params;
-@group(0) @binding(1) var<storage, read> current: array<f32>;
-@group(0) @binding(2) var<storage, read> baseline: array<f32>;
-@group(0) @binding(3) var<storage, read_write> output: array<f32>;
+@group(0) @binding(1) var<storage, read> input: array<f32>;
+@group(0) @binding(2) var<storage, read_write> output: array<f32>;
 
 @compute @workgroup_size(16, 16)
 fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
@@ -208,8 +209,27 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
   if (x >= params.width || y >= params.height) { return; }
   let idx = y * params.width + x;
 
-  let diff = abs(current[idx] - baseline[idx]);
-  output[idx] = select(1.0, 0.0, diff > params.threshold);
+  // Edge cells get 0
+  if (x == 0u || y == 0u || x == params.width - 1u || y == params.height - 1u) {
+    output[idx] = 0.0;
+    return;
+  }
+
+  // 3x3 box blur
+  let sum = input[(y - 1u) * params.width + (x - 1u)]
+          + input[(y - 1u) * params.width + x]
+          + input[(y - 1u) * params.width + (x + 1u)]
+          + input[y * params.width + (x - 1u)]
+          + input[idx]
+          + input[y * params.width + (x + 1u)]
+          + input[(y + 1u) * params.width + (x - 1u)]
+          + input[(y + 1u) * params.width + x]
+          + input[(y + 1u) * params.width + (x + 1u)];
+  let smoothed = sum / 9.0;
+
+  // Residual = actual - smoothed
+  let residual = input[idx] - smoothed;
+  output[idx] = abs(residual);
 }
 `,
 
@@ -345,20 +365,28 @@ class GpuComputeService {
     }
 
     // Uniform buffer (width, height, + kernel-specific params)
-    // For color-transform: [width, height, rampStops, 0]
-    // For others: [width, height, azimuth, altitude]
-    const uniformData = kernel === 'color-transform'
-      ? new Float32Array([width, height, params.ramp ? params.ramp.length / 4 : 0, 0])
-      : new Float32Array([
-          width, height,
-          params.uniforms?.[0] ?? 315 * Math.PI / 180,
-          params.uniforms?.[1] ?? 45 * Math.PI / 180,
-        ])
+    // Shaders declare width/height as u32, params as f32 or u32 — use DataView
+    // to write the correct types at the correct offsets.
+    const uniformArrayBuffer = new ArrayBuffer(16)
+    const uniformView = new DataView(uniformArrayBuffer)
+    uniformView.setUint32(0, width, true)   // little-endian u32
+    uniformView.setUint32(4, height, true)  // little-endian u32
+    if (kernel === 'color-transform') {
+      uniformView.setUint32(8, params.ramp ? params.ramp.length / 4 : 0, true)
+      uniformView.setUint32(12, 0, true)
+    } else if (kernel === 'anomaly') {
+      uniformView.setFloat32(8, params.uniforms?.[0] ?? 0.5, true)  // threshold
+      uniformView.setUint32(12, 0, true)
+    } else {
+      // dem-slope, dem-hillshade, ndvi, ndwi, nbr: azimuth + altitude (or padding)
+      uniformView.setFloat32(8, params.uniforms?.[0] ?? 315 * Math.PI / 180, true)
+      uniformView.setFloat32(12, params.uniforms?.[1] ?? 45 * Math.PI / 180, true)
+    }
     const uniformBuffer = this.device.createBuffer({
-      size: 16, // 4 x f32
+      size: 16, // 4 x f32/u32
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     })
-    this.device.queue.writeBuffer(uniformBuffer, 0, uniformData)
+    this.device.queue.writeBuffer(uniformBuffer, 0, uniformArrayBuffer)
 
     // Output buffer
     const outputBuffer = this.device.createBuffer({

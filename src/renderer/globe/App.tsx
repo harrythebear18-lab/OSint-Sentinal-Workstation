@@ -47,9 +47,9 @@ export default function App() {
   const [gibsLayers, setGibsLayers] = useState<GIBSLayer[]>([])
   const [imageryLayer, setImageryLayer] = useState<string>('esri')
   const [imageryOpacity, setImageryOpacity] = useState<number>(1.0)
-  const [terrain3d, setTerrain3d] = useState<boolean>(false)
+  const [terrain3d, setTerrain3d] = useState<boolean>(true)
   const [hillshade, setHillshade] = useState<boolean>(false)
-  const [terrainExaggeration, setTerrainExaggeration] = useState<number>(2.0)
+  const [terrainExaggeration, setTerrainExaggeration] = useState<number>(1.4)
   const [roadsVisible, setRoadsVisible] = useState<boolean>(true)
   const [labelsVisible, setLabelsVisible] = useState<boolean>(true)
 

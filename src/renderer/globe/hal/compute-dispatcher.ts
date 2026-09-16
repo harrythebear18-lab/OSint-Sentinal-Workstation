@@ -62,13 +62,18 @@ class ComputeDispatcher {
     // Probe WebCodecs
     this.capabilities.webcodecs = webCodecs.probe()
 
-    // Probe WASM SIMD
+    // Probe WASM SIMD — compile a minimal module with a v128.const instruction
     try {
       const testModule = new WebAssembly.Module(new Uint8Array([
         0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00,
-        0x01, 0x05, 0x01, 0x60, 0x00, 0x01, 0x7f, 0x03, 0x02, 0x01, 0x00, 0x07, 0x07,
-        0x01, 0x03, 0x73, 0x69, 0x6d, 0x64, 0x00, 0x00, 0x0a, 0x09, 0x01, 0x07, 0x00,
-        0xfd, 0x0c, 0x00, 0x00, 0x00, 0x0b,
+        0x01, 0x04, 0x01, 0x60, 0x00, 0x00,
+        0x03, 0x02, 0x01, 0x00,
+        0x07, 0x08, 0x01, 0x04, 0x73, 0x69, 0x6d, 0x64, 0x00, 0x00,
+        0x0a, 0x17, 0x01, 0x15, 0x00,
+        0xfd, 0x0c,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x1a, 0x0b,
       ]))
       new WebAssembly.Instance(testModule)
       this.capabilities.wasmSimd = true
@@ -225,11 +230,17 @@ class ComputeDispatcher {
       const inputs = payload.input2
         ? (payload.input3 ? [payload.input, payload.input2, payload.input3] : [payload.input, payload.input2])
         : [payload.input]
+      // Convert hillshade params from degrees to radians for the GPU shader
+      let uniforms = payload.params
+      if (task === 'hillshade' && payload.params) {
+        const deg2rad = Math.PI / 180
+        uniforms = new Float32Array([payload.params[0] * deg2rad, payload.params[1] * deg2rad])
+      }
       const result = await gpuCompute.execute(kernel, {
         width: payload.width,
         height: payload.height,
         input: inputs,
-        uniforms: payload.params,
+        uniforms,
         ramp: payload.ramp,
       })
       return {
@@ -311,7 +322,9 @@ class ComputeDispatcher {
       case 'webgpu':
         return this.capabilities.webgpu && cellCount >= GPU_MIN_CELLS
       case 'wasm-simd':
-        return this.capabilities.wasmSimd && isWasmReady() && ['ndvi', 'ndwi', 'nbr', 'slope', 'hillshade', 'anomaly'].includes(task)
+        // Slope is excluded because the current WAT implementation returns
+        // raw gradient magnitude, not degrees; hillshade/NDVI/band math are fine.
+        return this.capabilities.wasmSimd && isWasmReady() && ['ndvi', 'ndwi', 'nbr', 'hillshade', 'anomaly'].includes(task)
       case 'cpu-worker':
         return this.capabilities.cpuWorker
       case 'cpu-inline':

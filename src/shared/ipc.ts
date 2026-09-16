@@ -163,6 +163,7 @@ export const IPC = {
 
   // STAC/COG — real Sentinel-2 ingestion
   STAC_COG_COMPUTE: 'stac:cog:compute',
+  STAC_COG_BANDS: 'stac:cog:bands',
 } as const
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]

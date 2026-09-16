@@ -1,8 +1,8 @@
 import * as satellite from 'satellite.js'
 import type { LiveFeature } from '@shared/types'
 
-const TLE_URL = 'https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=tle'
-const MAX_SATELLITES = 100
+const TLE_URL = 'https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=tle'
+const MAX_SATELLITES = 50
 
 // Fallback ISS TLE (updated periodically — used if CelesTrak is unreachable)
 const ISS_TLE_FALLBACK = {
@@ -25,7 +25,11 @@ let tleLoaded = false
 async function loadTle(): Promise<void> {
   try {
     const res = await fetch(TLE_URL, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) osint-sentinel-workstation/0.1' },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+        'Accept': 'text/plain,*/*',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
       signal: AbortSignal.timeout(10000),
     })
     if (!res.ok) throw new Error(`CelesTrak TLE ${res.status}`)

@@ -299,7 +299,9 @@ class ClimateMonitor {
       this.stations = allStations
       this.measurements = allMeasurements
       this.lastStorms = storms
-      this.lastSpaceWeather = spaceWeather
+      if (spaceWeather) {
+        this.lastSpaceWeather = spaceWeather
+      }
       this.lastLightning = lightningFeatures as LiveFeature[]
       this.lastAircraft = aircraftFeatures as LiveFeature[]
       this.lastEarthquakes = quakeFeatures
@@ -318,7 +320,9 @@ class ClimateMonitor {
           storms,
           new Map(),
           lightningSimple,
+          fireFeatures as LiveFeature[],
         )
+        this.predictionEngine.runPredictions()
       }
 
       // ── Compute stats ──
@@ -337,8 +341,12 @@ class ClimateMonitor {
       broadcastToWindows(IPC.STORM_UPDATE, storms)
 
       // ── Broadcast SPACE_WEATHER_UPDATE ──
-      if (spaceWeather) {
-        broadcastToWindows(IPC.SPACE_WEATHER_UPDATE, spaceWeather)
+      const sw =
+        spaceWeather && (spaceWeather.kpIndex != null || spaceWeather.xrayFlareClass != null)
+          ? spaceWeather
+          : this.lastSpaceWeather || spaceWeather
+      if (sw) {
+        broadcastToWindows(IPC.SPACE_WEATHER_UPDATE, sw)
       }
 
       // ── Run full integrity pipeline (sensor, results, heuristics) ──

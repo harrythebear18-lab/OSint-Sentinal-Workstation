@@ -259,6 +259,26 @@ export function registerIpcHandlers(): void {
     }
   })
 
+  ipcMain.handle(IPC.STAC_COG_BANDS, async (_event, req: StacSearchOptions) => {
+    try {
+      const result = await stacCogService.fetchBands(req)
+      return {
+        bandA: Array.from(result.bandA),
+        bandB: Array.from(result.bandB),
+        width: result.width,
+        height: result.height,
+        bbox: result.bbox,
+        sceneId: result.sceneId,
+        date: result.date,
+        cloudCover: result.cloudCover,
+        durationMs: result.durationMs,
+      }
+    } catch (e) {
+      console.error('[stac-cog] fetchBands failed:', e)
+      return { error: String(e) }
+    }
+  })
+
   ipcMain.handle(IPC.SAT_TLE_GET, async () => {
     try {
       const tles = await getTleStrings()

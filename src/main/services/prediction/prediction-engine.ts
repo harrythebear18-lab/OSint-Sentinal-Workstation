@@ -15,6 +15,7 @@ import { IPC } from '@shared/ipc'
 import type {
   ClimateStation,
   ClimateMeasurement,
+  LiveFeature,
   Storm,
   RadarData,
   PredictionUpdate,
@@ -23,6 +24,7 @@ import type {
   SstAnomaly,
 } from '@shared/types'
 import { broadcastToWindows } from '../../windows'
+import { WildfireSpreadPredictor } from './wildfire-spread-predictor'
 import { OceanAtmosphereCoupler } from './ocean-atmosphere-coupler'
 import { RadarNowcastPredictor } from './radar-nowcast-predictor'
 import { StormTrackPredictor } from './storm-track-predictor'
@@ -38,12 +40,14 @@ export class PredictionEngine {
   private climateAnomalyPredictor = new ClimateAnomalyPredictor()
   private sensorFailurePredictor = new SensorFailurePredictor()
   private severeWeatherPredictor = new SevereWeatherPredictor()
+  private wildfireSpreadPredictor = new WildfireSpreadPredictor()
 
   private intervalId: NodeJS.Timeout | null = null
 
   // Latest data from ClimateMonitor
   private stations: ClimateStation[] = []
   private measurements = new Map<string, ClimateMeasurement>()
+  private fires: LiveFeature[] = []
   private storms: Storm[] = []
   private sensorHealth = new Map<string, SensorHealth>()
   private lightning: { lat: number; lon: number; timestamp: number }[] = []
@@ -57,9 +61,11 @@ export class PredictionEngine {
     storms: Storm[],
     sensorHealth: Map<string, SensorHealth>,
     lightning: { lat: number; lon: number; timestamp: number }[] = [],
+    fires: LiveFeature[] = [],
   ): void {
     this.stations = stations
     this.measurements = measurements
+    this.fires = fires
     this.storms = storms
     this.sensorHealth = sensorHealth
     this.lightning = lightning
@@ -74,6 +80,8 @@ export class PredictionEngine {
   /** Run all prediction models and broadcast a PredictionUpdate. */
   runPredictions(): PredictionUpdate {
     console.log('[prediction/engine] Running all prediction models (unified network mode)...')
+
+    try {
 
     // 1. Ocean-Atmosphere Coupling (foundation — must run first)
     const coupling = this.oceanAtmosphereCoupler.analyze(this.stations, this.measurements)
@@ -116,8 +124,16 @@ export class PredictionEngine {
     )
     console.log(`[prediction/engine] Precipitation forecast: ${precipitation.length} cells`)
 
+    // 8. Wildfire Spread (fast fuel, 1-hour forecast)
+    const wildfireSpread: PredictionAlert[] = this.wildfireSpreadPredictor.predict(
+      this.fires,
+      this.stations,
+      this.measurements,
+    )
+    console.log(`[prediction/engine] Wildfire spread: ${wildfireSpread.length} forecasts`)
+
     // Build summary
-    const allAlerts = [...severeWeather, ...climateAnomalies, ...sensorFailures, ...precipitation]
+    const allAlerts = [...severeWeather, ...wildfireSpread, ...climateAnomalies, ...sensorFailures, ...precipitation]
     const totalPredictions = allAlerts.length + stormTracks.length + sstAnomalies.length
 
     const highRiskCount = allAlerts.filter((a) => a.severity === 'high' || a.severity === 'critical').length
@@ -153,7 +169,24 @@ export class PredictionEngine {
     broadcastToWindows(IPC.PREDICTION_UPDATE, update)
     this.lastUpdate = update
     return update
+  } catch (err) {
+    console.error('[prediction/engine] runPredictions failed:', err)
+    const fallback: PredictionUpdate = {
+      severeWeather: [],
+      stormTracks: [],
+      sstAnomalies: [],
+      precipitation: [],
+      climateAnomalies: [],
+      sensorFailures: [],
+      teleconnectionIndices: {},
+      summary: { totalPredictions: 0, highRiskCount: 0, criticalRiskCount: 0, avgConfidence: 0 },
+      timestamp: Date.now(),
+    }
+    broadcastToWindows(IPC.PREDICTION_UPDATE, fallback)
+    this.lastUpdate = fallback
+    return fallback
   }
+}
 
   /** Get the last prediction update (or null if not yet run). */
   getLastUpdate(): PredictionUpdate | null {

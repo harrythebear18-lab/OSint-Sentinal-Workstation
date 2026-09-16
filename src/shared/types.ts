@@ -103,7 +103,7 @@ export interface GIBSLayer {
   maxZoom: number
   temporalResolution: string
   description: string
-  category: 'true-color' | 'false-color' | 'thermal' | 'vegetation' | 'geostationary'
+  category: 'true-color' | 'false-color' | 'thermal' | 'vegetation' | 'geostationary' | 'atmosphere'
 }
 
 export interface SentinelScene {

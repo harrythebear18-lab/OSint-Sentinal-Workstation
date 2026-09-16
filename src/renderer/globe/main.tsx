@@ -47,3 +47,9 @@ try {
 } catch (e) {
   console.error('[renderer] FATAL: React mount failed:', e)
 }
+
+// Plugin test harness — exposed for manual dev-console runs
+;(window as any).runPluginTests = async (options?: any) => {
+  const { runPluginTests } = await import('./plugins/plugin-harness')
+  return runPluginTests(options)
+}
