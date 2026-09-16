@@ -1,12 +1,27 @@
 import { useEffect, useRef, useState } from 'react'
 import * as Cesium from 'cesium'
-import { buildEsriProvider, buildGibsProvider, buildFlatTerrain, buildEsriTransportationProvider, buildEsriReferenceProvider } from './imageryProviders'
+import { buildEsriProvider, buildNaturalEarthProvider, buildGibsProvider, buildFlatTerrain, buildEsriTransportationProvider, buildEsriReferenceProvider } from './imageryProviders'
 import { DrawingManager } from './DrawingManager'
 import type { PickedEntity } from './DrawingManager'
 import { isDevRenderer } from './hal/is-prod'
 import type { GIBSLayer, DrawMode, Selection, LngLat } from '@shared/types'
 
 Cesium.Ion.defaultAccessToken = ''
+
+/** Generate an opaque white PNG data URL to use as a bottomless pole cap fill. */
+function getWhitePixelDataUrl(size: number = 256): string {
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = size
+  const ctx = canvas.getContext('2d')
+  if (!ctx) {
+    // 1x1 white PNG fallback
+    return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVQIW2P4DwABAQEAWI3nPAAAAABJRU5ErkJggg=='
+  }
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, size, size)
+  return canvas.toDataURL('image/png')
+}
 
 interface GlobeProps {
   imageryLayer: string | null
@@ -75,6 +90,22 @@ export default function Globe({
       console.log('[Globe] Cesium loaded')
       console.log('[Globe] container dimensions:', containerRef.current.clientWidth, 'x', containerRef.current.clientHeight)
 
+      setStatus('building natural earth underlay')
+      console.log('[Globe] building Natural Earth underlay...')
+      const naturalEarthProvider = buildNaturalEarthProvider()
+      console.log('[Globe] Natural Earth underlay built')
+
+      setStatus('building pole cap fill')
+      console.log('[Globe] building pole cap fill...')
+      const poleFillerProvider = new Cesium.SingleTileImageryProvider({
+        url: getWhitePixelDataUrl(),
+        rectangle: Cesium.Rectangle.MAX_VALUE,
+        tileWidth: 256,
+        tileHeight: 256,
+        credit: new Cesium.Credit('Pole cap fill'),
+      })
+      console.log('[Globe] pole cap fill built')
+
       setStatus('building Esri provider')
       console.log('[Globe] building Esri imagery provider...')
       const esriProvider = buildEsriProvider()
@@ -102,7 +133,7 @@ export default function Globe({
         infoBox: false,
         creditContainer: document.createElement('div'),
         shouldAnimate: true,
-        baseLayer: new Cesium.ImageryLayer(esriProvider as any),
+        baseLayer: new Cesium.ImageryLayer(poleFillerProvider as any),
         terrainProvider: flatTerrain,
         // ── PERFORMANCE TUNING FOR RTX 5060 ──
         // requestRenderMode saves GPU by only rendering on change.
@@ -121,6 +152,9 @@ export default function Globe({
 
       console.log('[Globe] Viewer created OK')
 
+      // Natural Earth sits above the white pole-fill layer so polar tiles render as map
+      v.imageryLayers.addImageryProvider(naturalEarthProvider as any, 1)
+
       // ── AGGRESSIVE PERFORMANCE TUNING ──
       const scene = v.scene
       const globe = scene.globe
@@ -135,15 +169,20 @@ export default function Globe({
       // and helps the camera collision system work properly
       globe.depthTestAgainstTerrain = true
       // Fill the polar regions (above ~85° lat) where Web Mercator imagery has no tiles.
-      // Without this, the poles appear as transparent holes in the globe.
-      globe.baseColor = Cesium.Color.fromBytes(20, 30, 45, 255)
-      // Disable expensive atmosphere effects
-      globe.showGroundAtmosphere = false
-      scene.fog.enabled = false
-      if (scene.skyAtmosphere) scene.skyAtmosphere.show = true // keep sky, it's cheap
-      // Disable expensive lighting features
-      scene.globe.enableLighting = false // will be toggled by hillshade
-      scene.globe.dynamicAtmosphereLighting = false
+      // White matches the ice caps shown by the underlying pole-filler imagery layer.
+      globe.baseColor = Cesium.Color.WHITE
+      v.scene.backgroundColor = Cesium.Color.BLACK
+      // Visual atmosphere: ground haze + horizon fog for depth and aurora visibility
+      globe.showGroundAtmosphere = true
+      scene.fog.enabled = true
+      // Halve fog density — default 2e-4 washes out contrast at mid altitudes
+      scene.fog.density = 0.0001
+      if (scene.skyAtmosphere) scene.skyAtmosphere.show = true
+      // Sun lighting always on — gives the day/night terminator and
+      // directional terrain shading (the "depth" feel). The hillshade toggle
+      // only controls the 12x animated cycle.
+      scene.globe.enableLighting = true
+      scene.globe.dynamicAtmosphereLighting = true
       // FXAA is cheaper than MSAA
       scene.postProcessStages.fxaa.enabled = true
       // Disable bloom (expensive)
@@ -360,7 +399,12 @@ export default function Globe({
       setStatus('setting camera view')
       console.log('[Globe] setting initial camera view...')
       v.camera.setView({
-        destination: Cesium.Cartesian3.fromDegrees(-95.0, 30.0, 2_500_000),
+        destination: Cesium.Cartesian3.fromDegrees(-45.7213, 22.5845, 21_750_200),
+        orientation: {
+          heading: Cesium.Math.toRadians(360),
+          pitch: Cesium.Math.toRadians(-90),
+          roll: 0,
+        },
       })
       console.log('[Globe] camera view set')
 
@@ -468,23 +512,26 @@ export default function Globe({
     const v = viewerRef.current
     if (!v) return
 
-    v.imageryLayers.removeAll()
+    // Remove every layer except the white pole filler (index 0) and Natural Earth underlay (index 1)
+    while (v.imageryLayers.length > 2) {
+      const top = v.imageryLayers.get(v.imageryLayers.length - 1)
+      if (top) v.imageryLayers.remove(top)
+    }
     roadsLayerRef.current = null
     labelsLayerRef.current = null
 
+    let base: Cesium.ImageryLayer | undefined
     if (!imageryLayer || imageryLayer === 'esri') {
-      const layer = v.imageryLayers.addImageryProvider(buildEsriProvider())
-      layer.alpha = imageryOpacity
+      base = v.imageryLayers.addImageryProvider(buildEsriProvider(), 2)
     } else {
       const gibsLayer = gibsLayers.find((l) => l.id === imageryLayer)
       if (gibsLayer) {
-        const layer = v.imageryLayers.addImageryProvider(buildGibsProvider(gibsLayer) as any)
-        layer.alpha = imageryOpacity
+        base = v.imageryLayers.addImageryProvider(buildGibsProvider(gibsLayer) as any, 2)
       } else {
-        const layer = v.imageryLayers.addImageryProvider(buildEsriProvider())
-        layer.alpha = imageryOpacity
+        base = v.imageryLayers.addImageryProvider(buildEsriProvider(), 2)
       }
     }
+    if (base) base.alpha = imageryOpacity
 
     // Re-add road/label overlays on top of the new base imagery
     if (roadsVisible) {
@@ -507,7 +554,7 @@ export default function Globe({
   useEffect(() => {
     const v = viewerRef.current
     if (!v) return
-    const layer = v.imageryLayers.get(0)
+    const layer = v.imageryLayers.get(2)
     if (layer) layer.alpha = imageryOpacity
   }, [imageryOpacity])
 
@@ -549,8 +596,9 @@ export default function Globe({
           const now = new Date()
           now.setHours(12, 0, 0, 0)
           v.clock.currentTime = Cesium.JulianDate.fromDate(now)
-          // 48x speed: 24h compressed into 30 minutes (86400s / 1800s = 48)
-          v.clock.multiplier = 48.0
+          // 12x speed: 24h compressed into 2 hours — fast enough to see day/night,
+          // but satellites still move at a believable pace rather than 48x blur.
+          v.clock.multiplier = 12.0
           v.clock.shouldAnimate = true
           v.scene.globe.enableLighting = true
           // Keep maximumRenderTimeChange at Infinity — we manually request renders
@@ -564,7 +612,9 @@ export default function Globe({
           }
           rafId = requestAnimationFrame(renderLoop)
         } else {
-          v.scene.globe.enableLighting = false
+          // Keep lighting on — only stop the animated day/night cycle.
+          // Without this the globe reverts to flat, uniformly-lit imagery.
+          v.scene.globe.enableLighting = true
           v.clock.shouldAnimate = true
           v.clock.multiplier = 1.0
           v.scene.maximumRenderTimeChange = Infinity

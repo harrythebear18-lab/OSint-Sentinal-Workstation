@@ -1,9 +1,25 @@
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
+import { cpSync, existsSync } from 'fs'
 import terser from '@rollup/plugin-terser'
 
 const isProd = process.env.NODE_ENV === 'production'
+
+/** Copy HAL worker scripts to out/main/workers so the worker pool finds them. */
+function copyHalWorkers() {
+  return {
+    name: 'copy-hal-workers',
+    writeBundle() {
+      const src = resolve(__dirname, 'src/main/services/hal/workers')
+      const dest = resolve(__dirname, 'out/main/workers')
+      if (existsSync(src)) {
+        cpSync(src, dest, { recursive: true, force: true })
+        console.log('[copy-hal-workers] copied HAL workers → out/main/workers')
+      }
+    },
+  }
+}
 
 /**
  * Production build hardening:
@@ -14,7 +30,7 @@ const isProd = process.env.NODE_ENV === 'production'
  */
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
+    plugins: [externalizeDepsPlugin(), copyHalWorkers()],
     resolve: {
       alias: {
         '@shared': resolve(__dirname, 'src/shared'),
