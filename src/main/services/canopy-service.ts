@@ -43,7 +43,9 @@ async function fetchNdviTile(
   const bbox = `${sw.lng},${sw.lat},${ne.lng},${ne.lat}`
 
   for (const date of dates) {
-    const url = `https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=MODIS_Terra_NDVI_8Day&CRS=EPSG:4326&BBOX=${bbox}&WIDTH=${reqWidth}&HEIGHT=${reqHeight}&FORMAT=image/png&TIME=${date}`
+    // CRS:84 keeps BBOX in lon,lat order (EPSG:4326 in WMS 1.3.0 is lat-first,
+    // which silently returns a fully transparent tile)
+    const url = `https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=MODIS_Terra_NDVI_8Day&CRS=CRS:84&BBOX=${bbox}&WIDTH=${reqWidth}&HEIGHT=${reqHeight}&FORMAT=image/png&TIME=${date}`
 
     try {
       // Use HAL streaming I/O for backpressure-aware download
