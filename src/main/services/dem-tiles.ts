@@ -8,9 +8,46 @@
 
 import { join, dirname } from 'path'
 import { homedir } from 'os'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, statSync, rmSync } from 'fs'
 
 const CACHE_DIR = join(homedir(), '.osint-sentinel-workstation', 'cache', 'dem')
+const MAX_CACHE_BYTES = 256 * 1024 * 1024
+
+let evictScheduled = false
+let writesSinceEvict = 0
+
+/** LRU-evict the DEM tile cache down to maxBytes (oldest mtime first). */
+export function evictDemCache(maxBytes = MAX_CACHE_BYTES): void {
+  if (!existsSync(CACHE_DIR)) return
+  const files: { path: string; size: number; mtime: number }[] = []
+  const walk = (dir: string) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, e.name)
+      if (e.isDirectory()) {
+        walk(full)
+      } else {
+        const st = statSync(full)
+        files.push({ path: full, size: st.size, mtime: st.mtimeMs })
+      }
+    }
+  }
+  walk(CACHE_DIR)
+
+  let total = files.reduce((s, f) => s + f.size, 0)
+  if (total <= maxBytes) return
+
+  files.sort((a, b) => a.mtime - b.mtime)
+  let removed = 0
+  for (const f of files) {
+    if (total <= maxBytes) break
+    try {
+      rmSync(f.path)
+      total -= f.size
+      removed++
+    } catch { /* file in use — skip */ }
+  }
+  console.log(`[dem] cache evicted ${removed} tiles — ${(total / 1048576).toFixed(0)} MB remaining`)
+}
 
 const TILE_URL = (z: number, x: number, y: number) =>
   `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`
@@ -50,6 +87,12 @@ async function fetchTilePng(z: number, x: number, y: number): Promise<Buffer | n
 
     mkdirSync(dirname(local), { recursive: true })
     writeFileSync(local, buf)
+
+    // Bound the cache — evict oldest tiles every 500 writes
+    if (++writesSinceEvict >= 500) {
+      writesSinceEvict = 0
+      try { evictDemCache() } catch { /* eviction is best-effort */ }
+    }
 
     return buf
   } catch (e) {

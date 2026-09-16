@@ -77,6 +77,7 @@ function createCockpitWindow(): BrowserWindow {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      webSecurity: false,
     },
   })
 
@@ -208,6 +209,16 @@ app.whenReady().then(() => {
   import('./services/hal/hal-manager').then(({ halManager }) => {
     console.log(halManager.summary())
   })
+
+  // Bound on-disk caches — DEM + imagery tiles grow unbounded otherwise.
+  // Evict at startup and once a day while the app runs.
+  const evictCaches = () => {
+    import('./services/tile-cache').then(({ TileCache }) =>
+      TileCache.evict(1024 * 1024 * 1024, 45).catch((e) => console.warn('[cache] evict failed:', e)))
+    import('./services/dem-tiles').then(({ evictDemCache }) => evictDemCache())
+  }
+  setTimeout(evictCaches, 30_000)
+  setInterval(evictCaches, 24 * 60 * 60 * 1000)
 })
 
 app.on('window-all-closed', () => {
