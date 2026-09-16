@@ -580,3 +580,34 @@ Build warnings:
 
 Run `window.runPluginTests()` from the renderer console and paste the returned `PluginTestReport` so the 41-plugin results can be recorded and any remaining mock gaps can be closed.
 
+### Harness Result — 41/41 PASS (2025-09-16)
+
+After the thenable-mock and fetch-stub fixes, the full registry passes headless:
+
+| Check | Result |
+|---|---|
+| Plugins tested | **41** |
+| Passed | **41** |
+| Failed | **0** |
+
+Command used in the renderer DevTools console:
+
+```js
+await window.runPluginTests({ stepTimeoutMs: 30000, stepsBeforeYield: 2 })
+```
+
+Remaining internally-caught WARN paths (acceptable — plugins degrade gracefully):
+
+- `earthquakes` / `volcano` — poll catches "not iterable" on the `{}` fetch stub.
+- `sentinel-stac` — `compute()` catches `result.error` on undefined IPC return.
+- `timelapse` — `scene.canvas` added to the mock (fixed `Invalid video width: [mock]`).
+- `drone-footage` — file picker needs user activation (expected headless).
+- `export-import` — 0 sources collected (no real data in harness context).
+
+Harness changes that made this possible:
+
+- `createMock().then` now returns `Promise.resolve(undefined).then(cb)` — mocks are
+  awaitable and resolve to `undefined`, so `result?.x || []` yields real empties.
+- `globalThis.fetch` is stubbed to a `200 {}` Response for the duration of the run
+  and restored in a `finally` block — zero real network access.
+

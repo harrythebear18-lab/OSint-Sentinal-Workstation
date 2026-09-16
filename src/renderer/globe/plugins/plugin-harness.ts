@@ -45,7 +45,9 @@ function createMock(): any {
   const target = () => {}
   return new Proxy(target, {
     get(_, prop: string | symbol) {
-      if (prop === 'then') return undefined
+      // Mocks are thenable: await/.then resolve to undefined so plugin code
+      // like `result?.profiles || []` falls through to real empty values.
+      if (prop === 'then') return (cb: any) => Promise.resolve(undefined).then(cb)
       if (prop === 'toString' || prop === 'valueOf' || prop === Symbol.toPrimitive) {
         return () => '[mock]'
       }
@@ -339,6 +341,7 @@ function makeMockViewer(): any {
   const scene = wrap({
     globe,
     camera,
+    canvas,
     primitives,
     groundPrimitives,
     imageryLayers,
@@ -471,17 +474,29 @@ export async function runPluginTests(options: HarnessOptions = {}): Promise<Plug
   console.log('[plugin-harness] starting staged plugin test run...')
   console.log(`[plugin-harness] ${plugins.length} plugins registered`)
 
-  let stepCount = 0
-  for (let i = 0; i < plugins.length; i++) {
-    const p = plugins[i]
-    console.log(`[plugin-harness] [${i + 1}/${plugins.length}] testing ${p.id}...`)
-    const result = await testPlugin(p, stepTimeoutMs)
-    results.push(result)
+  // Stub network so headless runs never hit real feeds
+  const realFetch = globalThis.fetch
+  globalThis.fetch = (async () =>
+    new Response('{}', {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    })) as unknown as typeof fetch
 
-    stepCount++
-    if (stepCount % stepsBeforeYield === 0) {
-      await yieldToMain(yieldBetweenMs)
+  let stepCount = 0
+  try {
+    for (let i = 0; i < plugins.length; i++) {
+      const p = plugins[i]
+      console.log(`[plugin-harness] [${i + 1}/${plugins.length}] testing ${p.id}...`)
+      const result = await testPlugin(p, stepTimeoutMs)
+      results.push(result)
+
+      stepCount++
+      if (stepCount % stepsBeforeYield === 0) {
+        await yieldToMain(yieldBetweenMs)
+      }
     }
+  } finally {
+    globalThis.fetch = realFetch
   }
 
   // Final yield so the last logs can flush before the summary
