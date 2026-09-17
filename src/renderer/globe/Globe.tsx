@@ -159,11 +159,14 @@ export default function Globe({
       const scene = v.scene
       const globe = scene.globe
 
-      // Tile loading — higher = fewer tiles loaded = faster (default 2)
-      globe.maximumScreenSpaceError = 4
-      // Cache size — keep small to avoid V8 heap exhaustion at high zoom.
-      // 100 tiles is enough for smooth panning; Cesium evicts LRU.
-      globe.tileCacheSize = 100
+      // Tile loading — 2 is Cesium's default; 4 trades visible detail
+      // (z18 cars/parking) for fewer tile loads. Lighting is already gated
+      // behind hillshade, so we can afford full detail here.
+      globe.maximumScreenSpaceError = 2
+      // Tile cache — 100 thrashes at z18: hi-res tiles evict before they
+      // render and Cesium falls back to blurry ancestors. 500 is the
+      // original value and holds a full zoom level of tiles.
+      globe.tileCacheSize = 500
       // Don't load terrain until needed
       // depthTestAgainstTerrain = true prevents seeing through hills/mountains
       // and helps the camera collision system work properly
