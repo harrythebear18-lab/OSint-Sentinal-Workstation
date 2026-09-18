@@ -279,8 +279,8 @@ osint-sentinel-workstation/
 Requires Node.js 20+.
 
 ```bash
-git clone https://github.com/harrythebear18-lab/OGOS-GEV.git
-cd OGOS-GEV
+git clone https://github.com/harrythebear18-lab/OSint-Sentinal-Workstation.git
+cd OSint-Sentinal-Workstation
 npm install
 npm run dev        # copies Cesium assets, starts electron-vite + Electron
 ```
