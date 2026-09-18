@@ -10,7 +10,9 @@ export function buildNaturalEarthProvider(): Cesium.ImageryProvider {
   return new Cesium.UrlTemplateImageryProvider({
     url: Cesium.buildModuleUrl('Assets/Textures/NaturalEarthII/{z}/{x}/{reverseY}.jpg'),
     tilingScheme: new Cesium.GeographicTilingScheme(),
-    maximumLevel: 5,
+    // Cesium's bundled NaturalEarthII tileset only ships levels 0–2 —
+    // anything higher is a guaranteed 404/ERR_FILE_NOT_FOUND.
+    maximumLevel: 2,
     credit: new Cesium.Credit('Natural Earth'),
   })
 }
