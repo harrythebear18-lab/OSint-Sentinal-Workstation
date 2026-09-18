@@ -91,9 +91,9 @@ export function registerComputeFallback(): void {
           } satisfies ComputeResponse
         }
 
-        // Convert to plain array for IPC (Float32Array doesn't serialize cleanly)
+        // Typed arrays structured-clone over IPC — no Array.from copy.
         const response: ComputeResponse = {
-          output: Array.from(outputArr),
+          output: outputArr,
           backend: 'cpu-worker',
           durationMs: result.durationMs,
           width: payload.width,

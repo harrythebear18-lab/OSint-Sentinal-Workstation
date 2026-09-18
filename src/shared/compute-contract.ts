@@ -87,7 +87,8 @@ export interface ComputeRequest {
 }
 
 export interface ComputeResponse {
-  output: number[]
+  /** Typed arrays structured-clone over IPC — Float32Array preferred, number[] accepted */
+  output: number[] | Float32Array
   backend: ComputeBackend
   durationMs: number
   width: number

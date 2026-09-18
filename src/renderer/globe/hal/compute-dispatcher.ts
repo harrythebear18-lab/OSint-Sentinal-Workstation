@@ -140,14 +140,16 @@ class ComputeDispatcher {
   /**
    * Threshold-based backend selection.
    *
-   *   < 128×128   → inline JS (no IPC overhead)
-   *   < 512×512   → WASM SIMD → worker → inline
-   *   >= 512×512  → WebGPU → WASM SIMD → worker → inline
+   *   < 128×128   → inline JS (GPU dispatch overhead dominates)
+   *   >= 128×128  → WebGPU → WASM SIMD → worker → inline
    */
   private selectBackendPriority(task: ComputeTask, payload: ComputePayload): ComputeBackend[] {
     const cellCount = payload.width * payload.height
     const small: ComputeBackend[] = ['cpu-inline']
     const medium: ComputeBackend[] = []
+    // GPU first even at medium sizes — a ~1ms dispatch beats serializing
+    // 16K+ cells through IPC to the worker pool.
+    if (this.canRunBackend('webgpu', task, payload)) medium.push('webgpu')
     if (this.canRunBackend('wasm-simd', task, payload)) medium.push('wasm-simd')
     if (this.canRunBackend('cpu-worker', task, payload)) medium.push('cpu-worker')
     medium.push('cpu-inline')
@@ -283,17 +285,18 @@ class ComputeDispatcher {
         payload: {
           width: payload.width,
           height: payload.height,
-          input: Array.from(payload.input),
-          input2: payload.input2 ? Array.from(payload.input2) : undefined,
-          input3: payload.input3 ? Array.from(payload.input3) : undefined,
-          params: payload.params ? Array.from(payload.params) : undefined,
+          // Typed arrays structured-clone over IPC — no Array.from copy.
+          input: payload.input,
+          input2: payload.input2,
+          input3: payload.input3,
+          params: payload.params,
           cellSizeX: payload.cellSizeX,
           cellSizeY: payload.cellSizeY,
         },
-      }) as { output: number[]; backend: ComputeBackend; durationMs: number; width: number; height: number } | null
+      }) as { output: number[] | Float32Array; backend: ComputeBackend; durationMs: number; width: number; height: number } | null
       if (!response || !response.output) throw new Error('CPU worker returned empty')
       return {
-        output: new Float32Array(response.output),
+        output: response.output instanceof Float32Array ? response.output : new Float32Array(response.output),
         backend: response.backend || 'cpu-worker',
         durationMs: performance.now() - start,
         task,

@@ -55,7 +55,9 @@ class WorkerPool {
   private taskHandlers: Map<string, string> = new Map() // task type → worker script path
 
   constructor() {
-    this.maxWorkers = Math.max(2, Math.min(8, availableParallelism()))
+    // Cap at half the logical cores (min 2, max 6) — the worker pool must
+    // never saturate the machine. Cesium, main, and the OS all need cores.
+    this.maxWorkers = Math.max(2, Math.min(6, Math.ceil(availableParallelism() / 2)))
   }
 
   /** Initialize the pool — spawns worker threads. Call once on app startup. */
