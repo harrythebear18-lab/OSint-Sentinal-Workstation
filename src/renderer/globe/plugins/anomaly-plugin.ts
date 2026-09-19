@@ -274,12 +274,14 @@ export class AnomalyPlugin implements EarthEnginePlugin {
       id: `anomaly-marker:${zone.id}`,
       position: Cesium.Cartesian3.fromDegrees(cx, cy),
       point: {
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
         pixelSize: new Cesium.ConstantProperty(6),
         color: new Cesium.ConstantProperty(color),
         outlineColor: new Cesium.ConstantProperty(Cesium.Color.WHITE),
         outlineWidth: new Cesium.ConstantProperty(2),
       },
       label: {
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
         text: zone.type === 'depression' ? 'DEP' : 'PRO',
         font: '9px monospace',
         fillColor: new Cesium.ConstantProperty(color),

@@ -336,6 +336,7 @@ export class InfrastructurePlugin implements EarthEnginePlugin {
           outlineColor: new Cesium.ConstantProperty(color.withAlpha(0.9)),
         },
         point: {
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
           pixelSize: size,
           color: new Cesium.ConstantProperty(color),
           outlineColor: new Cesium.ConstantProperty(Cesium.Color.WHITE),
@@ -363,6 +364,7 @@ export class InfrastructurePlugin implements EarthEnginePlugin {
       id: f.id,
       position: Cesium.Cartesian3.fromDegrees(center.lng, center.lat),
       point: {
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
         pixelSize: size,
         color: new Cesium.ConstantProperty(color),
         outlineColor: new Cesium.ConstantProperty(Cesium.Color.WHITE.withAlpha(0.6)),

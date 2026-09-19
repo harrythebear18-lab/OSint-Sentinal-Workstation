@@ -258,12 +258,14 @@ export class ExportImportPlugin implements EarthEnginePlugin {
         id: `import:${f.id}`,
         position: Cesium.Cartesian3.fromDegrees(c.lng, c.lat),
         point: {
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
           pixelSize: 10,
           color: new Cesium.ConstantProperty(color),
           outlineColor: new Cesium.ConstantProperty(Cesium.Color.WHITE),
           outlineWidth: new Cesium.ConstantProperty(2),
         },
         label: {
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
           text: f.name,
           font: '11px sans-serif',
           fillColor: new Cesium.ConstantProperty(color),

@@ -172,12 +172,14 @@ export class NetworkPlugin implements EarthEnginePlugin {
         id: 'user-location',
         position: new Cesium.ConstantPositionProperty(position),
         point: {
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
           pixelSize: 8,
           color: Cesium.Color.fromBytes(34, 197, 94, 255),
           outlineColor: Cesium.Color.WHITE,
           outlineWidth: 2,
         },
         label: {
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
           text: 'You',
           font: '10px monospace',
           fillColor: Cesium.Color.WHITE,
@@ -234,6 +236,7 @@ export class NetworkPlugin implements EarthEnginePlugin {
         id: endpointId,
         position: new Cesium.ConstantPositionProperty(endPos),
         point: {
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
           pixelSize: 4,
           color: Cesium.Color.fromBytes(239, 68, 68, 200),
           outlineColor: Cesium.Color.WHITE,

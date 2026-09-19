@@ -162,12 +162,14 @@ export class RoutesPlugin implements EarthEnginePlugin {
         id: 'route:start',
         position: Cesium.Cartesian3.fromDegrees(this.start.lon, this.start.lat),
         point: {
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
           pixelSize: 12,
           color: Cesium.Color.fromBytes(74, 255, 138, 255),
           outlineColor: Cesium.Color.WHITE,
           outlineWidth: 2,
         },
         label: {
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
           text: 'START',
           font: '11px monospace',
           fillColor: Cesium.Color.fromBytes(74, 255, 138, 255),
@@ -184,12 +186,14 @@ export class RoutesPlugin implements EarthEnginePlugin {
         id: 'route:end',
         position: Cesium.Cartesian3.fromDegrees(this.end.lon, this.end.lat),
         point: {
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
           pixelSize: 12,
           color: Cesium.Color.fromBytes(255, 74, 74, 255),
           outlineColor: Cesium.Color.WHITE,
           outlineWidth: 2,
         },
         label: {
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
           text: 'END',
           font: '11px monospace',
           fillColor: Cesium.Color.fromBytes(255, 74, 74, 255),

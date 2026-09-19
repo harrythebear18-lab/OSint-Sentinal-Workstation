@@ -123,12 +123,14 @@ export class SearchZonesPlugin implements EarthEnginePlugin {
       id: 'lkp:marker',
       position: Cesium.Cartesian3.fromDegrees(this.lkp.lon, this.lkp.lat),
       point: {
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
         pixelSize: 14,
         color: Cesium.Color.fromBytes(255, 74, 255, 255),
         outlineColor: Cesium.Color.WHITE,
         outlineWidth: 2,
       },
       label: {
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
         text: 'LKP',
         font: '11px monospace',
         fillColor: Cesium.Color.fromBytes(255, 74, 255, 255),

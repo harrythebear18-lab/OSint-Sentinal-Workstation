@@ -197,12 +197,14 @@ export class RemainsCorridorPlugin implements EarthEnginePlugin {
       id: 'remains:fall-point',
       position: Cesium.Cartesian3.fromDegrees(fall.lng, fall.lat),
       point: {
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
         pixelSize: new Cesium.ConstantProperty(14),
         color: new Cesium.ConstantProperty(Cesium.Color.fromBytes(255, 74, 74, 255)),
         outlineColor: new Cesium.ConstantProperty(Cesium.Color.WHITE),
         outlineWidth: new Cesium.ConstantProperty(2),
       },
       label: {
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
         text: new Cesium.ConstantProperty('FALL POINT'),
         font: new Cesium.ConstantProperty('12px sans-serif'),
         fillColor: new Cesium.ConstantProperty(Cesium.Color.WHITE),
@@ -271,12 +273,14 @@ export class RemainsCorridorPlugin implements EarthEnginePlugin {
       id: `choke:${choke.id}`,
       position: Cesium.Cartesian3.fromDegrees(choke.coord.lng, choke.coord.lat),
       point: {
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
         pixelSize: new Cesium.ConstantProperty(10),
         color: new Cesium.ConstantProperty(Cesium.Color.fromBytes(255, 74, 138, 255)),
         outlineColor: new Cesium.ConstantProperty(Cesium.Color.WHITE),
         outlineWidth: new Cesium.ConstantProperty(2),
       },
       label: {
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
         text: new Cesium.ConstantProperty('CHOKE'),
         font: new Cesium.ConstantProperty('10px sans-serif'),
         fillColor: new Cesium.ConstantProperty(Cesium.Color.fromBytes(255, 200, 220, 255)),

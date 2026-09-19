@@ -276,6 +276,7 @@ export class WaterPlugin implements EarthEnginePlugin {
         id: `water:${f.id}`,
         position: Cesium.Cartesian3.fromDegrees(c.lng, c.lat),
         point: {
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
           pixelSize: 8,
           color: new Cesium.ConstantProperty(Cesium.Color.fromBytes(74, 255, 138, 255)),
           outlineColor: new Cesium.ConstantProperty(Cesium.Color.WHITE),

@@ -158,12 +158,14 @@ export class CaseProfilesPlugin implements EarthEnginePlugin {
       id: `case:${marker.id}`,
       position: Cesium.Cartesian3.fromDegrees(marker.coord.lng, marker.coord.lat),
       point: {
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
         pixelSize: 12,
         color: new Cesium.ConstantProperty(color),
         outlineColor: new Cesium.ConstantProperty(Cesium.Color.WHITE),
         outlineWidth: new Cesium.ConstantProperty(2),
       },
       label: {
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
         text: marker.label,
         font: '11px monospace',
         fillColor: new Cesium.ConstantProperty(color),

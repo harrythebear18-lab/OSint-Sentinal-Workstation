@@ -158,6 +158,7 @@ export class GridAssetsPlugin implements EarthEnginePlugin {
         id,
         position: new Cesium.ConstantPositionProperty(position),
         point: {
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
           pixelSize: size,
           color,
           outlineColor: Cesium.Color.BLACK,

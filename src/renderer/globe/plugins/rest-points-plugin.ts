@@ -142,6 +142,7 @@ export class RestPointsPlugin implements EarthEnginePlugin {
       id: `rest:${p.id}`,
       position: Cesium.Cartesian3.fromDegrees(p.lng, p.lat),
       point: {
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
         pixelSize,
         color: new Cesium.ConstantProperty(color),
         outlineColor: new Cesium.ConstantProperty(Cesium.Color.WHITE.withAlpha(0.6)),

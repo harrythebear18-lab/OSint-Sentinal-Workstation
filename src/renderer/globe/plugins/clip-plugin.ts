@@ -194,6 +194,7 @@ export class ClipPlugin implements EarthEnginePlugin {
       id: `clip:${r.id}`,
       position: Cesium.Cartesian3.fromDegrees(r.lon, r.lat),
       point: {
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
         pixelSize,
         color: new Cesium.ConstantProperty(color),
         outlineColor: new Cesium.ConstantProperty(Cesium.Color.WHITE.withAlpha(0.7)),

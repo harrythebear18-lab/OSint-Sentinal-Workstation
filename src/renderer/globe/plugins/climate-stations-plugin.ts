@@ -254,6 +254,7 @@ export class ClimateStationsPlugin implements EarthEnginePlugin {
         id: `arrowhead:${s.id}`,
         position: new Cesium.ConstantPositionProperty(endPos),
         point: {
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
           pixelSize: 4,
           color: arrowColor,
           outlineColor: Cesium.Color.WHITE,
@@ -285,6 +286,7 @@ export class ClimateStationsPlugin implements EarthEnginePlugin {
         id,
         position: new Cesium.ConstantPositionProperty(position),
         point: {
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
           pixelSize,
           color,
           outlineColor: Cesium.Color.BLACK,
