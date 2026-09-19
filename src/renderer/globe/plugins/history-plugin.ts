@@ -47,6 +47,17 @@ interface SelectedSite extends HistoricSite {
   wikiLoading?: boolean
 }
 
+/** Ray-casting point-in-polygon over a {lng,lat} ring. */
+function pointInRing(lng: number, lat: number, ring: { lng: number; lat: number }[]): boolean {
+  let inside = false
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i].lng, yi = ring[i].lat
+    const xj = ring[j].lng, yj = ring[j].lat
+    if (yi > lat !== yj > lat && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) inside = !inside
+  }
+  return inside
+}
+
 export class HistoryPlugin implements EarthEnginePlugin {
   id = 'history'
   name = 'History & Research (OSM)'
@@ -62,6 +73,8 @@ export class HistoryPlugin implements EarthEnginePlugin {
   private lastBboxParsed: { west: number; south: number; east: number; north: number } | null = null
   private lastViewBbox: string | null = null
   private lastViewBboxParsed: { west: number; south: number; east: number; north: number } | null = null
+  private selection: { type: string; coords: { lng: number; lat: number }[] } | null = null
+  private fetchSeq = 0
   private show = true
   private eraFilter: HistoricEra | 'all' = 'all'
   private includePost1945 = false
@@ -103,6 +116,7 @@ export class HistoryPlugin implements EarthEnginePlugin {
     const sceneCtx = ctx.sceneContext as any
 
     // ── Fetch sites when selection bbox changes ──
+    this.selection = sceneCtx?.selection ?? null
     const selBbox = sceneCtx?.selectionBbox
     if (selBbox) {
       this.lastBboxParsed = selBbox
@@ -216,10 +230,16 @@ export class HistoryPlugin implements EarthEnginePlugin {
         this.fetchSites(this.lastBboxParsed)
       }
     } else if (id === 'run') {
-      const bbox = this.lastBboxParsed ?? this.lastViewBboxParsed
-      if (bbox) {
+      // Fetch = "what I'm looking at". Selections auto-fetch on draw, so the
+      // button always uses the current viewport — otherwise a stale selection
+      // keeps refetching its old area forever. computeViewRectangle overscans
+      // at oblique pitches, so query the legible centre (~60%).
+      const v = this.lastViewBboxParsed
+      if (v) {
+        const dx = (v.east - v.west) * 0.2
+        const dy = (v.north - v.south) * 0.2
         this.lastBbox = null
-        this.fetchSites(bbox)
+        this.fetchSites({ west: v.west + dx, south: v.south + dy, east: v.east - dx, north: v.north - dy })
       } else {
         this.lastError = 'Draw a selection or zoom to a region first'
       }
@@ -236,6 +256,7 @@ export class HistoryPlugin implements EarthEnginePlugin {
 
   private async fetchSites(bbox: { west: number; south: number; east: number; north: number }): Promise<void> {
     if (!this.ipc || !this.dataSource) return
+    const seq = ++this.fetchSeq
     this.status = { ...this.status, status: 'loading' }
 
     try {
@@ -247,12 +268,28 @@ export class HistoryPlugin implements EarthEnginePlugin {
         opts: { includePost1945: this.includePost1945 },
       })) as HistoryResponse | null
 
+      // A newer fetch started while this one was in flight — drop stale
+      // results so an older (often larger) bbox can't overwrite newer state.
+      if (seq !== this.fetchSeq) return
+
       if (!result?.sites) {
         this.status = { count: 0, status: 'nominal' }
         return
       }
 
-      this.allSites = result.sites
+      // Hard renderer-side bound: markers must sit inside the requested
+      // region — inside the actual polygon for polygon selections (Overpass
+      // can only query the bounding rect, which leaks corner sites), else
+      // inside the bbox. Belt-and-braces on top of service-side clipping.
+      const ring =
+        this.selection?.type === 'polygon' && this.selection.coords.length >= 3
+          ? this.selection.coords
+          : null
+      this.allSites = result.sites.filter((s) =>
+        ring
+          ? pointInRing(s.lng, s.lat, ring)
+          : s.lng >= bbox.west && s.lng <= bbox.east && s.lat >= bbox.south && s.lat <= bbox.north,
+      )
       this.siteById.clear()
       for (const s of this.allSites) this.siteById.set(s.id, s)
       this.lastError = result.error ?? null
@@ -261,7 +298,7 @@ export class HistoryPlugin implements EarthEnginePlugin {
       this.lastViewBbox = null
 
       this.cullToViewport({ west: bbox.west, south: bbox.south, east: bbox.east, north: bbox.north })
-      this.status = { count: result.sites.length, status: 'nominal' }
+      this.status = { count: this.allSites.length, status: 'nominal' }
     } catch (err) {
       console.warn('[history] fetch failed:', err)
       this.status = { ...this.status, status: 'error', error: String(err) }

@@ -42,7 +42,8 @@ export async function fetchHistoricSites(
   const bboxNums: [number, number, number, number] = [sw.lng, sw.lat, ne.lng, ne.lat]
 
   // Cache holds the unfiltered set; post-1945 filtering is applied per-request.
-  const cached = await featureCache.get<HistoryResponse>('history', bboxNums)
+  // 'v2' — bbox-clipped parsing superseded the earlier unclipped entries.
+  const cached = await featureCache.get<HistoryResponse>('history-v2', bboxNums)
   if (cached) {
     console.log('[history] cache hit')
     return filterSites(cached, opts)
@@ -90,9 +91,9 @@ export async function fetchHistoricSites(
       }
 
       const data = JSON.parse(text)
-      const sites = parseOverpassResponse(data)
+      const sites = parseOverpassResponse(data, sw, ne)
       const result = { sites, bounds }
-      featureCache.set('history', bboxNums, result).catch(() => {})
+      featureCache.set('history-v2', bboxNums, result).catch(() => {})
       console.log(`[history] ${url} OK: ${sites.length} sites`)
       return filterSites(result, opts)
     } catch (e) {
@@ -111,9 +112,25 @@ function filterSites(resp: HistoryResponse, opts: HistoryFetchOpts): HistoryResp
   return { ...resp, sites: resp.sites.filter((s) => s.era !== 'modern') }
 }
 
-function parseOverpassResponse(data: { elements?: OverpassElement[] }): HistoricSite[] {
+/**
+ * Parse Overpass elements strictly within the requested bbox.
+ * Overpass returns ways/relations that merely INTERSECT the bbox, with their
+ * full geometry — a long Roman road or large site relation would otherwise
+ * paint markers/polygons far outside the queried area. Way coords are clipped
+ * to in-bbox vertices; relations take a marker at the centroid of member
+ * geometry inside the bbox; elements contributing nothing inside are dropped.
+ */
+function parseOverpassResponse(
+  data: { elements?: OverpassElement[] },
+  sw: LngLat,
+  ne: LngLat,
+): HistoricSite[] {
   const sites: HistoricSite[] = []
   if (!data.elements) return sites
+
+  const inside = (lat: number | undefined, lon: number | undefined) =>
+    lat !== undefined && lon !== undefined &&
+    lat >= sw.lat && lat <= ne.lat && lon >= sw.lng && lon <= ne.lng
 
   for (const el of data.elements) {
     const tags = el.tags ?? {}
@@ -124,21 +141,24 @@ function parseOverpassResponse(data: { elements?: OverpassElement[] }): Historic
     let coords: LngLat[] | undefined
 
     if (el.type === 'node') {
+      if (!inside(el.lat, el.lon)) continue
       lng = el.lon
       lat = el.lat
     } else if (el.type === 'way' && el.geometry?.length) {
-      coords = el.geometry.map((g) => ({ lng: g.lon, lat: g.lat }))
+      const clipped = el.geometry.filter((g) => inside(g.lat, g.lon))
+      if (!clipped.length) continue
+      coords = clipped.map((g) => ({ lng: g.lon, lat: g.lat }))
       const c = centroid(coords)
       lng = c.lng
       lat = c.lat
     } else if (el.type === 'relation' && el.members) {
-      // Use the first outer member's geometry for a representative point.
-      const outer = el.members.find((m) => m.role === 'outer' && m.geometry?.length)
-      if (outer?.geometry) {
-        const c = centroid(outer.geometry.map((g) => ({ lng: g.lon, lat: g.lat })))
-        lng = c.lng
-        lat = c.lat
-      }
+      // Marker at centroid of member geometry inside the bbox — a relation's
+      // full footprint can span far beyond the query area.
+      const inner = el.members.flatMap((m) => m.geometry ?? []).filter((g) => inside(g.lat, g.lon))
+      if (!inner.length) continue
+      const c = centroid(inner.map((g) => ({ lng: g.lon, lat: g.lat })))
+      lng = c.lng
+      lat = c.lat
     }
 
     if (lng === undefined || lat === undefined) continue
