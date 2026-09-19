@@ -45,6 +45,7 @@ import { gridAssetsPlugin } from './grid-assets-plugin'
 import { networkPlugin } from './network-plugin'
 import { predictionsPlugin } from './predictions-plugin'
 import { detectionPlugin } from './detection-plugin'
+import { historyPlugin } from './history-plugin'
 
 // Register all plugins (doesn't activate them)
 pluginManager.register([
@@ -96,6 +97,8 @@ pluginManager.register([
   timelapsePlugin,
   droneFootagePlugin,
   exportImportPlugin,
+  // History & Research
+  historyPlugin,
   // System
   benchmarkPlugin,
   // VR / OpenXR
@@ -145,5 +148,6 @@ export {
   exportImportPlugin,
   hikerProfilePlugin,
   vrPlugin,
+  historyPlugin,
 }
 export type { EarthEnginePlugin, PluginContext, PluginStats, PluginControlSpec } from './plugin-manager'

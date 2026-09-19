@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | **Platform** | Windows (x64 + arm64) — Electron 32, React 18, CesiumJS |
-| **Plugins** | 41, in 11 domain groups — 41/41 pass the headless harness |
+| **Plugins** | 42, in 12 domain groups — 42/42 pass the headless harness |
 | **Compute** | WebGPU (7 WGSL kernels) → WASM SIMD (4 kernels) → worker pool (4 scripts) → CPU, auto-dispatched |
 | **Imagery** | Sentinel-2 STAC/COG up to 2048² cells; Esri base to z18; GIBS NDVI canopy |
 | **Terrain** | DEM hillshade, slope, anomaly, D8 + Priority-Flood hydrology — all worker/GPU-backed |
@@ -145,10 +145,10 @@ exactly which hardware ran the job.
 
 ## Plugin architecture
 
-All **41 plugins** follow a unified interface (`EarthEnginePlugin`):
+All **42 plugins** follow a unified interface (`EarthEnginePlugin`):
 `register / unregister / update / getStats / getControls / onControl`.
 
-The plugin panel groups them into 11 domains:
+The plugin panel groups them into 12 domains:
 
 | Group | Plugins |
 |-------|---------|
@@ -160,6 +160,7 @@ The plugin panel groups them into 11 domains:
 | 🌊 Climate & Ocean | climate-stations, storms, space-weather |
 | ⚡ Infrastructure | infrastructure, grid-assets, network |
 | 🧠 AI & Vision | clip, vision, web-search, detection |
+| 📜 History & Research | history |
 | 📹 Media & Export | timelapse, drone-footage, export-import |
 | 🖥️ System | benchmark |
 | 🥽 VR / OpenXR | vr |
@@ -178,10 +179,10 @@ DevTools console:
 
 ```js
 await window.runPluginTests({ stepTimeoutMs: 30000, stepsBeforeYield: 2 })
-// → { total: 41, passed: 41, failed: 0, results: [...] }
+// → { total: 42, passed: 42, failed: 0, results: [...] }
 ```
 
-Current status: **41/41 PASS.**
+Current status: **42/42 PASS.**
 
 ## Hydrology model
 
@@ -264,7 +265,7 @@ osint-sentinel-workstation/
 │           │   └── wasm/               # WAT source + compiled SIMD module
 │           ├── analyst/       # analyst engine, action runner, context store,
 │           │                  #   annotation resolver, detection overlay
-│           └── plugins/       # 41 plugins + manager + harness + panel
+│           └── plugins/       # 42 plugins + manager + harness + panel
 ├── scripts/
 │   ├── clip_server.py         # CLIP FastAPI server
 │   ├── check-ai.js            # AI status checker
@@ -321,14 +322,14 @@ Workers inside the packaged ASAR are loaded via the pool's eval-worker +
 
 **v0.1.0 — production build**
 
-- 41/41 plugins pass the headless harness (register → controls → update →
+- 42/42 plugins pass the headless harness (register → controls → update →
   control → unregister, zero network)
 - HAL fully wired: WebGPU + WASM SIMD + worker pool + WebCodecs + streaming I/O
 - Sentinel-2 STAC/COG at up to 2048² output cells; Esri base at z18
 - Canopy GIBS WMS axis-order fixed (CRS:84) — real vegetation zones
 - Bounded caches: DEM 256 MB, imagery 1 GB / 45 d, startup + daily + per-write
   eviction
-- Plugin panel reorganized into 11 domain groups
+- Plugin panel organized into 12 domain groups
 - Globe lighting gated behind hillshade toggle (animated 12× sun cycle when on,
   zero per-render cost when off)
 - Production packaging verified: installer + portable, workers functional

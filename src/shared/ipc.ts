@@ -29,6 +29,7 @@ export const IPC = {
   WATER_FETCH: 'terrain:water:fetch',
   ROAD_FETCH: 'terrain:road:fetch',
   INFRA_FETCH: 'infra:fetch',
+  HISTORY_FETCH: 'history:sites:fetch',
 
   // Satellite imagery (GIBS)
   SENTINEL_SEARCH: 'imagery:sentinel:search',

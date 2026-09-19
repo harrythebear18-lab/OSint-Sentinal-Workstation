@@ -31,6 +31,7 @@ const CATEGORIES: CategoryMeta[] = [
   { key: 'climate',        label: 'CLIMATE & OCEAN',       color: '#4affd4', icon: '🌊' },
   { key: 'infrastructure', label: 'INFRASTRUCTURE',        color: '#ffea4a', icon: '⚡' },
   { key: 'ai',             label: 'AI & VISION',           color: '#a04aff', icon: '🧠' },
+  { key: 'history',        label: 'HISTORY & RESEARCH',    color: '#d4a04a', icon: '📜' },
   { key: 'media',          label: 'MEDIA & EXPORT',        color: '#ffd44a', icon: '📹' },
   { key: 'system',         label: 'SYSTEM',                color: '#8a9aa8', icon: '�️' },
   { key: 'vr',             label: 'VR / OPENXR',           color: '#ff4a8a', icon: '🥽' },

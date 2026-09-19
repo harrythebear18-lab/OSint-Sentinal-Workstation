@@ -74,6 +74,12 @@ const api = {
     fetch: (bounds: unknown) => ipcRenderer.invoke(IPC.INFRA_FETCH, { bounds }),
   },
 
+  /* ── History & Research (OSM Overpass historic=*, era-classified) ── */
+  history: {
+    sites: (bounds: unknown, opts?: { includePost1945?: boolean }) =>
+      ipcRenderer.invoke(IPC.HISTORY_FETCH, { bounds, opts }),
+  },
+
   /* ── Imagery ── */
   imagery: {
     search: (req: unknown) => ipcRenderer.invoke(IPC.SENTINEL_SEARCH, req),

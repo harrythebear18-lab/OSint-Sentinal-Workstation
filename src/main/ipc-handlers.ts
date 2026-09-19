@@ -29,6 +29,7 @@ import { runBehaviorEngine } from './services/behavior-engine'
 import { fetchWaterFeatures } from './services/water-service'
 import { fetchRoads } from './services/road-service'
 import { fetchInfrastructure } from './services/infrastructure-service'
+import { fetchHistoricSites } from './services/history-service'
 import { fetchRadarData, fetchWeather, fetchRainfallForBbox } from './services/weather-service'
 import { checkClipHealth, embedText, embedImage, similarity } from './services/clip-service'
 import { webSearch } from './services/web-search-service'
@@ -233,6 +234,10 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(IPC.INFRA_FETCH, async (_event, req) => {
     return fetchInfrastructure(req.bounds)
+  })
+
+  ipcMain.handle(IPC.HISTORY_FETCH, async (_event, req) => {
+    return fetchHistoricSites(req.bounds, req.opts)
   })
 
   /* ── Satellite imagery (GIBS) ── */

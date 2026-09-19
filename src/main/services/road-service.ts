@@ -28,7 +28,7 @@ const OVERPASS_URLS = [
 ]
 
 /** Overpass servers reject requests without a proper User-Agent (return 406). */
-const USER_AGENT = 'OSINTSentinelWorkstation/0.1 (https://github.com/harrythebear18-lab/OGOS-GEV)'
+const USER_AGENT = 'OSINTSentinelWorkstation/0.1 (https://github.com/harrythebear18-lab/OSint-Sentinal-Workstation)'
 
 /**
  * Map OSM highway types to cost multipliers.

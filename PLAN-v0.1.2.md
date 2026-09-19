@@ -85,6 +85,13 @@ batteries, wrecks) → post-1945 excluded.
 **Done when:** Wiltshire bbox → Stonehenge/Avebury classified prehistoric;
 Thames estuary bbox → WW2 defenses; click → summary card.
 
+**Status: IMPLEMENTED (v0.1.2).** `history-service.ts` (Overpass
+`historic=*`, multi-server fallback, featureCache, era classification from
+start_date + keywords — 17/17 classifier unit checks pass) + `history-plugin`
+(era-colored markers/labels, era filter, post-1945 toggle, click → site card
++ Wikipedia REST summary, GeoJSON export). Wikidata carried via `wikidata`
+QID tags; SPARQL bbox enrichment deferred to v2 with the official registers.
+
 ---
 
 ## Workstream 3 — Sentinel API (bidirectional bridge)

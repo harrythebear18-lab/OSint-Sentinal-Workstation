@@ -415,6 +415,46 @@ export interface WaterResponse {
 }
 
 /* ------------------------------------------------------------------ */
+/* Historic sites (OSM Overpass historic=*)                            */
+/* ------------------------------------------------------------------ */
+
+export type HistoricEra =
+  | 'prehistoric'
+  | 'roman'
+  | 'medieval'
+  | 'early-modern'
+  | 'industrial'
+  | 'ww1'
+  | 'ww2'
+  | 'modern'
+  | 'unknown'
+
+export interface HistoricSite {
+  id: string
+  name: string
+  /** OSM historic= value: castle, archaeological_site, battlefield, ... */
+  historicType: string
+  era: HistoricEra
+  eraLabel: string
+  lng: number
+  lat: number
+  /** Way/relation outline geometry when present */
+  coords?: LngLat[]
+  /** OSM wikipedia tag, e.g. "en:Stonehenge" */
+  wikipedia?: string
+  wikidata?: string
+  startDate?: string
+  heritage?: string
+  description?: string
+}
+
+export interface HistoryResponse {
+  sites: HistoricSite[]
+  bounds: [LngLat, LngLat]
+  error?: string
+}
+
+/* ------------------------------------------------------------------ */
 /* Infrastructure (OSM Overpass — airports, power, substations, buoys) */
 /* ------------------------------------------------------------------ */
 

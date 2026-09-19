@@ -44,6 +44,10 @@ declare global {
         fetch: (bounds: unknown) => Promise<{ features: any[]; bounds: any[]; error?: string }>
       }
 
+      history: {
+        sites: (bounds: unknown, opts?: { includePost1945?: boolean }) => Promise<{ sites: any[]; bounds: any[]; error?: string }>
+      }
+
       imagery: {
         search: (req: unknown) => Promise<unknown>
         layers: () => Promise<any[]>
