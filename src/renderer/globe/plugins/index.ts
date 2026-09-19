@@ -105,6 +105,10 @@ pluginManager.register([
   vrPlugin,
 ])
 
+// Dev/testing hook — lets devtools, CDP harnesses and the API bridge reach
+// the registry without threading references through React.
+;(window as any).__pluginManager = pluginManager
+
 export {
   pluginManager,
   weatherPlugin,
