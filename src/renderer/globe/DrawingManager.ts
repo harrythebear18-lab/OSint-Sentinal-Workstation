@@ -216,10 +216,15 @@ export class DrawingManager {
     }
 
     if (sel.type === 'bbox' && sel.coords.length >= 2) {
-      const west = Math.min(sel.coords[0].lng, sel.coords[2].lng)
-      const south = Math.min(sel.coords[0].lat, sel.coords[2].lat)
-      const east = Math.max(sel.coords[0].lng, sel.coords[2].lng)
-      const north = Math.max(sel.coords[0].lat, sel.coords[2].lat)
+      // Bounds over all coords — safe for 2-corner API selections as well
+      // as the 4-corner rings produced by dragging.
+      let west = Infinity, south = Infinity, east = -Infinity, north = -Infinity
+      for (const c of sel.coords) {
+        if (c.lng < west) west = c.lng
+        if (c.lng > east) east = c.lng
+        if (c.lat < south) south = c.lat
+        if (c.lat > north) north = c.lat
+      }
 
       // Use polygon with classificationType to clamp to terrain
       this.bboxEntity = this.drawDataSource.entities.add({
