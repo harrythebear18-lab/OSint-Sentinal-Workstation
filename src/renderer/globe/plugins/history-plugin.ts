@@ -61,6 +61,7 @@ export class HistoryPlugin implements EarthEnginePlugin {
   private lastBbox: string | null = null
   private lastBboxParsed: { west: number; south: number; east: number; north: number } | null = null
   private lastViewBbox: string | null = null
+  private lastViewBboxParsed: { west: number; south: number; east: number; north: number } | null = null
   private show = true
   private eraFilter: HistoricEra | 'all' = 'all'
   private includePost1945 = false
@@ -107,9 +108,9 @@ export class HistoryPlugin implements EarthEnginePlugin {
       this.lastBboxParsed = selBbox
       const bboxKey = `${selBbox.west.toFixed(2)},${selBbox.south.toFixed(2)},${selBbox.east.toFixed(2)},${selBbox.north.toFixed(2)}`
       if (bboxKey !== this.lastBbox) {
-        this.lastBbox = bboxKey
         const height = sceneCtx?.camera?.height
         if (!height || height <= 500_000) {
+          this.lastBbox = bboxKey
           this.fetchSites(selBbox)
         }
       }
@@ -117,11 +118,14 @@ export class HistoryPlugin implements EarthEnginePlugin {
 
     // ── Viewport culling on camera move ──
     const viewBbox = sceneCtx?.bbox as BBox | undefined
-    if (viewBbox && this.allSites.length > 0) {
-      const viewKey = `${viewBbox.west.toFixed(3)},${viewBbox.south.toFixed(3)},${viewBbox.east.toFixed(3)},${viewBbox.north.toFixed(3)}`
-      if (viewKey !== this.lastViewBbox) {
-        this.lastViewBbox = viewKey
-        this.cullToViewport(viewBbox)
+    if (viewBbox) {
+      this.lastViewBboxParsed = viewBbox
+      if (this.allSites.length > 0) {
+        const viewKey = `${viewBbox.west.toFixed(3)},${viewBbox.south.toFixed(3)},${viewBbox.east.toFixed(3)},${viewBbox.north.toFixed(3)}`
+        if (viewKey !== this.lastViewBbox) {
+          this.lastViewBbox = viewKey
+          this.cullToViewport(viewBbox)
+        }
       }
     }
   }
@@ -212,9 +216,12 @@ export class HistoryPlugin implements EarthEnginePlugin {
         this.fetchSites(this.lastBboxParsed)
       }
     } else if (id === 'run') {
-      if (this.lastBboxParsed) {
+      const bbox = this.lastBboxParsed ?? this.lastViewBboxParsed
+      if (bbox) {
         this.lastBbox = null
-        this.fetchSites(this.lastBboxParsed)
+        this.fetchSites(bbox)
+      } else {
+        this.lastError = 'Draw a selection or zoom to a region first'
       }
     } else if (id === 'export') {
       this.exportGeoJSON()
