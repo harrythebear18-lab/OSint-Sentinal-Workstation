@@ -43,7 +43,7 @@ export async function getVesselFeatures(): Promise<LiveFeature[]> {
     const data = (await res.json()) as AxiomResponse
 
     const features: LiveFeature[] = []
-    const MAX_VESSELS = 500
+    const MAX_VESSELS = 2000
 
     for (const f of data.features) {
       if (features.length >= MAX_VESSELS) break
